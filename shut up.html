@@ -1,0 +1,3031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- This site is hosted on Netlify. Anyone can build and deploy a site
+     like this one for free: https://netlify.new/?utm_campaign=loops&utm_source=ai-legible&utm_medium=owned&utm_content=comment&utm_id=e9e01a49-450f-4fc7-b755-536335dbb1cb
+     Netlify hosting facts for this site: static/SSR served via Netlify Edge. -->
+<title>Raksha - Safety App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#4F3FE0">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  #splash-screen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: linear-gradient(135deg, #6C5CE7, #3B2FB0);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+  }
+  #splash-screen.fade-out { opacity: 0; visibility: hidden; pointer-events: none; }
+  #splash-logo {
+    width: 92px; height: 92px; border-radius: 24px; background: rgba(255,255,255,0.15);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transform: scale(0.7);
+    animation: splashLogoIn 0.6s ease forwards;
+  }
+  @keyframes splashLogoIn { to { opacity: 1; transform: scale(1); } }
+  #splash-name {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 30px; font-weight: 800; color: #fff; margin-top: 18px;
+    opacity: 0; transform: translateY(8px);
+    animation: splashTextIn 0.5s ease forwards; animation-delay: 0.55s;
+  }
+  #splash-tagline {
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 14px; color: rgba(255,255,255,0.85); margin-top: 8px; text-align: center; padding: 0 40px;
+    opacity: 0; transform: translateY(8px);
+    animation: splashTextIn 0.5s ease forwards; animation-delay: 1.05s;
+  }
+  @keyframes splashTextIn { to { opacity: 1; transform: translateY(0); } }
+
+  :root {
+    --primary: #4F3FE0;
+    --primary-dark: #3B2FB0;
+    --primary-light: #6C5CE7;
+    --emergency: #E5484D;
+    --emergency-dark: #C93A3E;
+    --safe-green: #22C55E;
+    --bg: #F4F5FA;
+    --text-dark: #1A1A2E;
+    --text-muted: #6B7280;
+    --card-radius: 20px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--bg); width: 100%; overflow-x: hidden;
+    touch-action: manipulation; -webkit-user-select: none; user-select: none;
+  }
+  input, textarea { -webkit-user-select: text; user-select: text; }
+  .phone {
+    width: 100%; max-width: 480px; margin: 0 auto; min-height: 100vh; background: var(--bg);
+    display: flex; flex-direction: column;
+    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+  }
+  .screen { display: none; flex-direction: column; flex: 1; padding: 28px 20px 16px; }
+  .screen.active { display: flex; animation: screenFadeIn 0.2s ease; }
+  @keyframes screenFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .brand-mark { width: 54px; height: 54px; border-radius: 16px; background: var(--primary); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+  .brand-mark i { color: #fff; font-size: 26px; }
+  h1.app-title { font-size: 21px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
+  p.sub { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; }
+  label.field-label { font-size: 12px; font-weight: 600; color: #374151; display: block; margin: 12px 0 6px; }
+  input.field, select.field {
+    width: 100%; padding: 13px 14px; border-radius: 10px; border: 1.5px solid #e5e7eb;
+    font-size: 16px; background: #f9fafb; outline: none;
+  }
+  input.field:focus, select.field:focus { border-color: var(--primary); background: #fff; }
+  .btn-primary { margin-top: 18px; width: 100%; padding: 14px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; min-height: 48px; transition: background 0.15s ease, transform 0.1s ease; letter-spacing: 0.1px; }
+  .btn-primary:active { background: var(--primary-dark); transform: scale(0.98); }
+  .btn-secondary { margin-top: 10px; width: 100%; padding: 13px; background: transparent; color: #374151; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 13.5px; font-weight: 600; cursor: pointer; min-height: 46px; transition: background 0.15s ease, transform 0.1s ease; }
+  .btn-secondary:active { background: #f9fafb; transform: scale(0.98); }
+  .link-text { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 16px; }
+  .link-text span { color: var(--primary); font-weight: 600; cursor: pointer; }
+  .error-msg { color: var(--emergency); font-size: 12.5px; margin-top: 6px; min-height: 16px; }
+
+  .pw-wrap { position: relative; }
+  .pw-wrap .field { padding-right: 44px; }
+  .pw-toggle { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); background: none; border: none; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: #9ca3af; cursor: pointer; }
+  .pw-toggle i { font-size: 19px; }
+  .pw-strength-track { height: 4px; background: #eef0f2; border-radius: 4px; margin-top: 8px; overflow: hidden; }
+  .pw-strength-fill { height: 100%; width: 0%; background: var(--emergency); border-radius: 4px; transition: width 0.25s ease, background 0.25s ease; }
+  .pw-strength-label { font-size: 11px; color: #9ca3af; margin-top: 5px; }
+  .check-row { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--text-muted); cursor: pointer; line-height: 1.4; }
+  .check-row input { margin-top: 2px; width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; }
+  .remember-row { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 10px; }
+  .remember-row .check-row span { font-size: 12px; }
+  .mini-link { font-size: 12px; color: var(--primary); font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .btn-primary.loading { opacity: 0.75; pointer-events: none; }
+  .back-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; cursor: pointer; padding: 4px 0; }
+  .back-row i { font-size: 18px; color: var(--text-dark); }
+  .back-row span { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+
+  .guardian-card { background: #fff; border: 1.5px solid #eef0f2; border-radius: 12px; padding: 14px; margin-bottom: 12px; position: relative; }
+  .guardian-card .remove-g { position: absolute; top: 10px; right: 10px; background: none; border: none; color: var(--emergency); cursor: pointer; font-size: 18px; padding: 6px; }
+  .add-guardian-btn { margin-top: 4px; width: 100%; padding: 13px; background: #EEECFD; color: var(--primary); border: 1.5px dashed #C9C2F5; border-radius: 10px; font-size: 13.5px; font-weight: 600; cursor: pointer; min-height: 46px; }
+
+  /* Top header: greeting + bell + avatar */
+  .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .top-header .greeting-wrap .greeting { font-size: 18px; font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 6px; }
+  .top-header-icons { display: flex; align-items: center; gap: 10px; }
+  .bell-btn { width: 38px; height: 38px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; color: var(--text-dark); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .header-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; cursor: pointer; border: none; }
+  .secure-badge { display: inline-flex; align-items: center; gap: 6px; background: #EAF7EA; color: var(--safe-green); font-size: 11.5px; font-weight: 700; padding: 5px 10px; border-radius: 20px; margin-bottom: 16px; }
+  .secure-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--safe-green); }
+
+  /* Protected status card */
+  .status-card {
+    background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+    border-radius: var(--card-radius); padding: 20px; color: #fff; margin-bottom: 18px;
+    box-shadow: 0 10px 24px rgba(75,63,224,0.28);
+  }
+  .status-card-top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .status-shield { width: 48px; height: 48px; border-radius: 14px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .status-shield i { font-size: 22px; }
+  .status-label { font-size: 10.5px; font-weight: 700; letter-spacing: 1px; opacity: 0.85; text-transform: uppercase; }
+  .status-title { font-size: 19px; font-weight: 800; margin-top: 2px; }
+  .status-sub { font-size: 12px; opacity: 0.85; margin-top: 1px; }
+  .status-meta-row { display: flex; background: rgba(255,255,255,0.12); border-radius: 12px; padding: 10px 0; margin-bottom: 12px; }
+  .status-meta { flex: 1; text-align: center; border-right: 1px solid rgba(255,255,255,0.18); }
+  .status-meta:last-child { border-right: none; }
+  .status-meta i { font-size: 15px; margin-bottom: 3px; display: block; }
+  .status-meta .meta-value { font-size: 12.5px; font-weight: 700; }
+  .status-meta .meta-label { font-size: 9.5px; opacity: 0.75; margin-top: 1px; }
+  .status-location { font-size: 12px; opacity: 0.9; display: flex; align-items: center; gap: 5px; margin-bottom: 14px; }
+  .status-sos-row { display: flex; justify-content: space-between; align-items: center; }
+  .status-sos-row .sos-text { font-size: 13px; font-weight: 700; }
+  .status-sos-row .sos-sub { font-size: 10.5px; opacity: 0.8; }
+  .sos-pill-btn {
+    background: var(--emergency); color: #fff; border: none; border-radius: 30px;
+    padding: 10px 22px; font-size: 14px; font-weight: 800; letter-spacing: 0.5px; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(229,72,77,0.5); flex-shrink: 0; transition: transform 0.1s ease;
+  }
+  .sos-pill-btn:active { transform: scale(0.94); }
+  .sos-pill-btn.triggered { animation: pulse 0.4s ease; }
+
+  /* My Circle avatar row */
+  .section-heading { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 12px; }
+  .section-heading h3 { font-size: 15px; font-weight: 700; color: var(--text-dark); }
+  .section-heading .see-all { font-size: 12.5px; color: var(--primary); font-weight: 600; cursor: pointer; }
+  .circle-avatar-row { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 20px; }
+  .circle-avatar-item { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; cursor: pointer; }
+  .circle-avatar {
+    width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; color: #fff; font-size: 17px; margin-bottom: 6px; position: relative;
+  }
+  .circle-avatar .live-dot { position: absolute; bottom: 1px; right: 1px; width: 12px; height: 12px; border-radius: 50%; background: var(--safe-green); border: 2px solid #fff; }
+  .circle-avatar-item span { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+  .circle-avatar-add { width: 52px; height: 52px; border-radius: 50%; border: 2px dashed #C9C2F5; display: flex; align-items: center; justify-content: center; color: var(--primary); background: #fff; margin-bottom: 6px; font-size: 26px; font-weight: 300; line-height: 1; }
+
+  .home-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .greeting { font-size: 18px; font-weight: 700; color: var(--text-dark); }
+  .greeting-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .status-row { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+  .status-chip { font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 20px; background: #f3f4f6; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+  .status-chip.good { background: #eaf3de; color: #3b6d11; }
+  .status-chip.warn { background: #fdece7; color: #963a22; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 10px; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; flex-shrink: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+  .sos-wrap { display: flex; flex-direction: column; align-items: center; margin: 14px 0 20px; }
+  .sos-btn { width: 150px; height: 150px; border-radius: 50%; background: var(--emergency); border: none; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 0 0 10px rgba(229,72,77,0.14); }
+  .sos-btn.triggered { animation: pulse 0.5s ease; }
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(0.94); } 100% { transform: scale(1); } }
+  .sos-btn span.big { font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+  .sos-btn span.small { font-size: 10.5px; margin-top: 4px; opacity: 0.9; }
+  .hint-text { font-size: 11.5px; color: #9ca3af; margin-top: 10px; text-align: center; line-height: 1.5; }
+  .status-banner { background: #fdece7; border: 1px solid #f3cabb; color: #963a22; padding: 10px 12px; border-radius: 10px; font-size: 12.5px; margin-bottom: 14px; display: none; }
+  .status-banner.show { display: block; }
+  .link-box { background: #f3f4f6; border-radius: 8px; padding: 8px 10px; font-size: 11px; color: #374151; word-break: break-all; margin-top: 6px; }
+
+  .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  .quick-card { background: #fff; border: 1px solid #eef0f2; border-radius: 14px; padding: 14px 10px; text-align: center; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.05); transition: transform 0.1s ease, box-shadow 0.15s ease; }
+  .quick-card:active { transform: scale(0.96); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+  .quick-card i { font-size: 20px; color: var(--primary); }
+  .quick-card p { font-size: 11.5px; font-weight: 600; color: var(--text-dark); margin-top: 6px; }
+
+  .bottom-nav { display: flex; border-top: 1px solid #eef0f2; padding: 8px 0 4px; background: #fff; }
+  .nav-item { flex: 1; text-align: center; cursor: pointer; color: #9ca3af; padding: 4px 0; }
+  .nav-item.active { color: var(--primary); }
+  .nav-item i { font-size: 19px; display: block; }
+  .nav-item span { font-size: 10px; margin-top: 2px; display: block; }
+
+  .contact-row { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid #eef0f2; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .contact-name { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+  .contact-phone { font-size: 12px; color: var(--text-muted); }
+  .contact-rel { font-size: 11px; color: var(--primary); font-weight: 600; }
+  .del-btn { background: none; border: none; color: var(--emergency); cursor: pointer; font-size: 18px; padding: 8px; }
+
+  /* Family Circle screen */
+  .circle-active-badge { display: inline-flex; align-items: center; gap: 6px; background: #EAF7EA; color: var(--safe-green); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; margin-bottom: 14px; }
+  .owner-card { background: #fff; border-radius: 14px; padding: 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .owner-tag { background: #F3E8FF; color: var(--primary); font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 12px; margin-left: auto; }
+  .family-member-card { background: #fff; border-radius: 14px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+  .family-member-top { display: flex; align-items: center; gap: 12px; }
+  .rel-tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-left: 6px; }
+  .rel-tag.mother, .rel-tag.parent { background: #FCE4EC; color: #C2185B; }
+  .rel-tag.son, .rel-tag.sibling { background: #E3F2FD; color: #1565C0; }
+  .rel-tag.daughter { background: #F3E5F5; color: #7B1FA2; }
+  .rel-tag.spouse\/partner { background: #FFF3E0; color: #E65100; }
+  .rel-tag.other, .rel-tag.relative { background: #ECEFF1; color: #455A64; }
+  .family-member-device { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+  .family-member-status { font-size: 11px; color: var(--safe-green); font-weight: 600; margin-top: 3px; display: flex; align-items: center; gap: 4px; }
+  .family-member-status .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--safe-green); }
+
+  /* Security Center */
+  .profile-card { background: linear-gradient(135deg, var(--primary-light), var(--primary-dark)); border-radius: 18px; padding: 18px; color: #fff; margin-bottom: 16px; }
+  .profile-top { display: flex; align-items: center; gap: 12px; }
+  .profile-avatar { width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; }
+  .profile-name { font-size: 16px; font-weight: 700; }
+  .profile-phone { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+  .profile-live { font-size: 11px; opacity: 0.85; margin-top: 4px; display: flex; align-items: center; gap: 5px; }
+  .sec-section-label { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; margin: 20px 0 10px; }
+  .sec-row { background: #fff; border-radius: 12px; padding: 14px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; cursor: pointer; box-shadow: 0 1px 4px rgba(0,0,0,0.05); transition: transform 0.1s ease; }
+  .sec-row:active { transform: scale(0.98); }
+  .sec-row-label { font-size: 13.5px; font-weight: 600; color: var(--text-dark); display: flex; align-items: center; gap: 10px; }
+  .trusted-guardian-note { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-bottom: 12px; }
+
+  /* ---- Child Mode: a genuinely friendlier, more playful look ---- */
+  body.child-mode { background: #FFF9EE; }
+  body.child-mode .phone { background: #FFF9EE; }
+  body.child-mode h1.app-title { font-size: 23px; }
+  body.child-mode .status-card { border-radius: 26px; background: linear-gradient(135deg, #FFB870, #F4A259); box-shadow: 0 10px 24px rgba(244,162,89,0.35); }
+  body.child-mode .sos-pill-btn { background: #FF6B6B; box-shadow: 0 4px 14px rgba(255,107,107,0.55); border-radius: 40px; font-size: 15px; padding: 12px 24px; }
+  body.child-mode .status-shield { background: rgba(255,255,255,0.3); }
+  body.child-mode .quick-card { border-radius: 20px; border-width: 2px; }
+  body.child-mode .quick-card:active { transform: scale(0.94); }
+  body.child-mode .btn-primary { background: #4F3FE0; border-radius: 16px; font-size: 16px; padding: 16px; }
+  body.child-mode .circle-avatar { border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
+  body.child-mode .nav-item.active { color: #F4A259; }
+  body.child-mode .secure-badge { background: #E8F7E0; }
+
+
+  .call-screen { background: #14161b !important; color: #fff; align-items: center; justify-content: space-between; padding: 50px 24px 34px !important; }
+  .avatar-circle { width: 92px; height: 92px; border-radius: 50%; background: #2c2f38; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+  .avatar-circle i { font-size: 42px; color: #ccc; }
+  .caller-name { font-size: 23px; font-weight: 600; margin-top: 16px; text-align: center; }
+  .caller-sub { font-size: 13px; color: #9ca3af; margin-top: 4px; text-align: center; }
+  .call-actions { display: flex; justify-content: space-around; width: 100%; }
+  .call-btn { width: 60px; height: 60px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .call-btn.decline { background: #e0433d; }
+  .call-btn.accept { background: #2ecc71; }
+  .call-btn i { color: #fff; font-size: 25px; }
+
+  .place-row { background: #f9fafb; border: 1px solid #eef0f2; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+  .place-row i { font-size: 19px; color: #4F3FE0; }
+  .place-name { font-size: 13px; font-weight: 600; color: #1a1f2e; }
+  .place-dist { font-size: 11px; color: #6b7280; }
+
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6; }
+  .toggle-row p.t-title { font-size: 13.5px; font-weight: 600; color: #1a1f2e; }
+  .toggle-row p.t-sub { font-size: 11.5px; color: #6b7280; margin-top: 2px; max-width: 230px; }
+  .switch { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider-el { position: absolute; inset: 0; background: #e5e7eb; border-radius: 20px; cursor: pointer; transition: 0.2s; }
+  .slider-el::before { content: ""; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+  input:checked + .slider-el { background: #4F3FE0; }
+  input:checked + .slider-el::before { transform: translateX(18px); }
+
+  .history-row { background: #f9fafb; border: 1px solid #eef0f2; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+  .history-row .h-type { font-size: 13px; font-weight: 600; color: #963a22; }
+  .history-row .h-time { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .history-row .h-loc { font-size: 10.5px; color: #9ca3af; margin-top: 3px; word-break: break-all; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+  .modal-overlay.show { display: flex; }
+  .modal-box { background: #fff; border-radius: 16px; padding: 22px; width: 100%; max-width: 320px; text-align: center; }
+  .modal-box i.big-icon { font-size: 34px; color: #4F3FE0; }
+  .modal-box h3 { font-size: 17px; font-weight: 700; color: #1a1f2e; margin: 10px 0 6px; }
+  .modal-box p { font-size: 13px; color: #6b7280; margin-bottom: 8px; }
+  .countdown-num { font-size: 30px; font-weight: 800; color: #4F3FE0; margin: 8px 0; }
+
+  .role-toggle { display: flex; gap: 6px; background: #f3f4f6; border-radius: 10px; padding: 4px; margin-bottom: 18px; }
+  .role-toggle button { flex: 1; padding: 10px 6px; border: none; border-radius: 8px; background: transparent; font-size: 13px; font-weight: 700; color: #6b7280; cursor: pointer; }
+  .role-toggle button.active { background: #fff; color: #4F3FE0; box-shadow: 0 1px 3px rgba(0,0,0,0.14); }
+</style>
+</head>
+<body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash-screen">
+  <div id="splash-logo">
+    <svg width="64" height="64" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M16 2L4 6.5V15C4 22.5 9 28.5 16 30C23 28.5 28 22.5 28 15V6.5L16 2Z" fill="#fff"/>
+      <path d="M16 8C13.24 8 11 10.24 11 13C11 16.75 16 22 16 22C16 22 21 16.75 21 13C21 10.24 18.76 8 16 8ZM16 15C14.9 15 14 14.1 14 13C14 11.9 14.9 11 16 11C17.1 11 18 11.9 18 13C18 14.1 17.1 15 16 15Z" fill="#4F3FE0"/>
+    </svg>
+  </div>
+  <div id="splash-name">Raksha</div>
+  <div id="splash-tagline">Peace of mind for every phone in the family.</div>
+</div>
+
+<div class="phone">
+
+  <!-- LOGIN -->
+  <div class="screen active" id="screen-login">
+    <div class="brand-mark">
+      <svg width="30" height="30" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M16 2L4 6.5V15C4 22.5 9 28.5 16 30C23 28.5 28 22.5 28 15V6.5L16 2Z" fill="#fff"/>
+        <path d="M16 8C13.24 8 11 10.24 11 13C11 16.75 16 22 16 22C16 22 21 16.75 21 13C21 10.24 18.76 8 16 8ZM16 15C14.9 15 14 14.1 14 13C14 11.9 14.9 11 16 11C17.1 11 18 11.9 18 13C18 14.1 17.1 15 16 15Z" fill="#4F3FE0"/>
+      </svg>
+    </div>
+    <h1 class="app-title">Raksha</h1>
+    <p class="sub">Personal safety, one tap away</p>
+
+    <div class="role-toggle">
+      <button type="button" id="role-btn-user" class="active" onclick="setLoginRole('user')">I'm a User</button>
+      <button type="button" id="role-btn-guardian" onclick="setLoginRole('guardian')">I'm a Guardian</button>
+    </div>
+
+    <div id="user-login-fields">
+      <label class="field-label">Email</label>
+      <input class="field" id="login-email" type="email" placeholder="name@example.com" autocomplete="off" oninput="validateEmailField('login-email','login-email-err')">
+      <div class="error-msg" id="login-email-err"></div>
+      <label class="field-label">Password</label>
+      <div class="pw-wrap">
+        <input class="field" id="login-pass" type="password" placeholder="Enter your password">
+        <button type="button" class="pw-toggle" onclick="togglePw('login-pass', this)"><i class="ti ti-eye"></i></button>
+      </div>
+      <div class="remember-row">
+        <label class="check-row"><input type="checkbox" id="login-remember"><span>Remember me on this device</span></label>
+        <span class="mini-link" onclick="handleForgotPassword()">Forgot password?</span>
+      </div>
+      <div class="error-msg" id="login-error"></div>
+      <button class="btn-primary" id="login-btn" onclick="handleLogin()">Log in</button>
+      <button type="button" class="btn-secondary" onclick="signInWithGoogle()" style="display:flex; align-items:center; justify-content:center; gap:10px;">
+        <svg width="16" height="16" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.84 2.09-1.8 2.73v2.27h2.92c1.7-1.57 2.68-3.88 2.68-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.27c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.34C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.97 10.71c-.18-.54-.28-1.11-.28-1.71s.1-1.17.28-1.71V4.95H.96C.35 6.17 0 7.55 0 9s.35 2.83.96 4.05l3.01-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.59-2.59C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.95l3.01 2.34C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+        Sign in with Google
+      </button>
+      <p class="link-text" id="signup-prompt">New here? <span onclick="showScreen('screen-signup')">Create an account</span></p>
+      <p class="link-text" style="font-size:11px; margin-top:4px;">Stuck redirecting to guardian setup on open? <span onclick="clearStuckGoogleSession()">Clear Google session</span></p>
+    </div>
+
+    <div id="guardian-login-fields" style="display:none;">
+      <p class="hint-text" id="guardian-join-hint" style="display:none; text-align:left; background:#EEECFD; padding:10px 12px; border-radius:10px; color:var(--primary); font-weight:600;"></p>
+      <label class="field-label">Tracking ID (or link) shared with you</label>
+      <input class="field" id="guardian-login-id" type="text" placeholder="e.g. u1a2b3c or the full link">
+      <label class="field-label">Your name</label>
+      <input class="field" id="guardian-login-name" type="text" placeholder="Your name">
+      <label class="field-label">Your phone number</label>
+      <input class="field" id="guardian-login-phone" type="tel" placeholder="+91 98765 43210">
+      <label class="field-label">Your relationship to them</label>
+      <select class="field" id="guardian-login-relationship">
+        <option value="Guardian">Guardian</option>
+        <option value="Parent">Parent</option>
+        <option value="Sibling">Sibling</option>
+        <option value="Spouse/Partner">Spouse/Partner</option>
+        <option value="Friend">Friend</option>
+        <option value="Relative">Relative</option>
+      </select>
+      <div class="error-msg" id="guardian-login-error"></div>
+      <button class="btn-primary" id="guardian-login-btn" onclick="handleGuardianLogin()">Go to Guardian Dashboard</button>
+      <p class="link-text">The tracking ID is on the person's SOS link, or from their app's Settings screen.</p>
+    </div>
+  </div>
+
+  <!-- SIGNUP -->
+  <div class="screen" id="screen-signup">
+    <div class="back-row" onclick="showScreen('screen-login')"><i class="ti ti-arrow-left"></i><span>Back</span></div>
+    <h1 class="app-title" style="margin-top:14px;">Create account</h1>
+    <p class="sub">Tell us about yourself</p>
+    <label class="field-label">Full name</label>
+    <input class="field" id="signup-name" type="text" placeholder="Your name">
+    <label class="field-label">Your phone number</label>
+    <input class="field" id="signup-phone" type="tel" placeholder="+91 98765 43210">
+    <label class="field-label">Email</label>
+    <input class="field" id="signup-email" type="email" placeholder="name@example.com" oninput="validateEmailField('signup-email','signup-email-err')">
+    <div class="error-msg" id="signup-email-err"></div>
+    <label class="field-label">Password</label>
+    <div class="pw-wrap">
+      <input class="field" id="signup-pass" type="password" placeholder="Create a password" oninput="updatePwStrength()">
+      <button type="button" class="pw-toggle" onclick="togglePw('signup-pass', this)"><i class="ti ti-eye"></i></button>
+    </div>
+    <div class="pw-strength-track"><div class="pw-strength-fill" id="pw-strength-fill"></div></div>
+    <p class="pw-strength-label" id="pw-strength-label">Use 8+ characters with a number or symbol</p>
+    <label class="field-label">Confirm password</label>
+    <input class="field" id="signup-pass-confirm" type="password" placeholder="Re-enter your password">
+    <label class="check-row" style="margin-top:14px;">
+      <input type="checkbox" id="signup-terms">
+      <span>I agree this is a project demo and understand SMS/calls are simulated until real credentials are added</span>
+    </label>
+    <div class="error-msg" id="signup-error"></div>
+    <button class="btn-primary" id="signup-btn" onclick="goToGuardianSetup()">Continue</button>
+    <p class="link-text">Already have an account? <span onclick="showScreen('screen-login')">Log in</span></p>
+  </div>
+
+  <!-- GUARDIAN SETUP -->
+  <div class="screen" id="screen-guardians-setup">
+    <div class="back-row" onclick="showScreen('screen-signup')"><i class="ti ti-arrow-left"></i><span>Back</span></div>
+    <h1 class="app-title" style="margin-top:14px;">Who should we alert?</h1>
+    <p class="sub">Add at least one person who'll get your SOS alerts</p>
+    <div id="guardian-form-list"></div>
+    <button class="add-guardian-btn" onclick="addGuardianField()">+ Add another guardian</button>
+    <div class="error-msg" id="guardian-error"></div>
+    <button class="btn-primary" onclick="finishSetup()">Finish setup</button>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen" id="screen-home" style="padding-bottom:0;">
+    <div style="flex:1; padding: 28px 20px 8px; overflow-y:auto;">
+      <div class="top-header">
+        <div class="greeting-wrap">
+          <p class="greeting"><span id="home-greeting">Hi there</span></p>
+        </div>
+        <div class="top-header-icons">
+          <button class="bell-btn"><i class="ti ti-bell"></i></button>
+          <button class="header-avatar" id="header-avatar-btn" onclick="showScreen('screen-settings')">?</button>
+        </div>
+      </div>
+
+      <span class="secure-badge"><span class="dot"></span> Secure connection</span>
+
+      <div class="status-card">
+        <div class="status-card-top">
+          <div class="status-shield"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 5v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V5l-8-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <div>
+            <p class="status-label">Status</p>
+            <p class="status-title" id="protected-status-title">Protected</p>
+            <p class="status-sub" id="circle-count-text">0 people in your circle</p>
+          </div>
+        </div>
+        <div class="status-meta-row">
+          <div class="status-meta"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 3px; display:block;"><rect x="2" y="7" width="18" height="10" rx="2"/><line x1="22" y1="11" x2="22" y2="13"/><rect x="4" y="9" width="10" height="6" fill="currentColor" stroke="none"/></svg><p class="meta-value" id="battery-chip">--</p><p class="meta-label">Battery</p></div>
+          <div class="status-meta"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 3px; display:block;"><path d="M5 12.5a11 11 0 0 1 14 0"/><path d="M8.5 16a6 6 0 0 1 7 0"/><line x1="12" y1="19.5" x2="12" y2="19.51"/></svg><p class="meta-value" id="sync-chip">--</p><p class="meta-label">Network</p></div>
+          <div class="status-meta"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 3px; display:block;"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="10" y1="19" x2="14" y2="19"/></svg><p class="meta-value" id="device-label">--</p><p class="meta-label">Device</p></div>
+        </div>
+        <p class="status-location"><i class="ti ti-map-pin"></i> <span id="location-status">Locating you...</span></p>
+        <div class="status-sos-row">
+          <div><p class="sos-text">Emergency SOS</p><p class="sos-sub">Alerts all guardians instantly</p></div>
+          <button class="sos-pill-btn" id="sos-button" onclick="triggerSOS('manual')">SOS</button>
+        </div>
+      </div>
+
+      <div class="status-banner" id="sos-banner">
+        <span id="sos-banner-text">SOS triggered. Guardians would be notified here.</span>
+        <div class="link-box" id="tracking-link-box"></div>
+        <button class="btn-secondary" id="copy-link-btn" style="margin-top:8px;" onclick="copyTrackingLink()">Copy live tracking link</button>
+        <button class="btn-secondary" style="margin-top:6px;" onclick="showScreen('screen-sos-chat')"><i class="ti ti-message-circle" style="margin-right:6px;"></i> Chat &amp; voice call with guardian</button>
+        <p id="ack-status" style="display:none; margin-top:8px; font-size:12px; color:#3b6d11; font-weight:600;"></p>
+      </div>
+
+      <div class="section-heading">
+        <h3>My Circle</h3>
+        <span class="see-all" onclick="showScreen('screen-contacts')">See all ›</span>
+      </div>
+      <div class="circle-avatar-row" id="circle-avatar-row">
+        <div class="circle-avatar-item" onclick="showScreen('screen-contacts')">
+          <div class="circle-avatar-add">+</div>
+          <span>Add</span>
+        </div>
+      </div>
+
+      <div class="quick-grid">
+        <div class="quick-card" onclick="showScreen('screen-nearby')"><i class="ti ti-map-pin"></i><p>Nearby help</p></div>
+        <div class="quick-card" onclick="showScreen('screen-walk-home')"><i class="ti ti-walk"></i><p>Walk Me Home</p></div>
+        <div class="quick-card" onclick="showScreen('screen-safe-walk')"><i class="ti ti-walk"></i><p>Safe Walk</p></div>
+        <div class="quick-card" onclick="showScreen('screen-safety-quiz')"><i class="ti ti-shield-check"></i><p>Safety Quiz</p></div>
+        <div class="quick-card" onclick="showScreen('screen-ai-chat')"><i class="ti ti-message-circle"></i><p>Ask Raksha (AI)</p></div>
+        <div class="quick-card" onclick="showScreen('screen-sos-chat')"><i class="ti ti-message-circle"></i><p>Chat &amp; call</p></div>
+        <div class="quick-card" onclick="showScreen('screen-history')"><i class="ti ti-history"></i><p>SOS history</p></div>
+        <div class="quick-card" onclick="call112()"><i class="ti ti-phone-call"></i><p>Call 112</p></div>
+        <div class="quick-card" id="siren-card" onclick="toggleSiren()"><i class="ti ti-volume-3"></i><p id="siren-label">Loud siren</p></div>
+        <div class="quick-card" id="cancel-sos-card" onclick="cancelSOS()" style="display:none;"><i class="ti ti-player-stop"></i><p>I'm safe - cancel SOS</p></div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item active" data-nav="screen-home" onclick="showScreen('screen-home')"><i class="ti ti-home"></i><span>Home</span></div>
+      <div class="nav-item" data-nav="screen-map" onclick="showScreen('screen-map')"><i class="ti ti-map-pin"></i><span>Map</span></div>
+      <div class="nav-item" data-nav="screen-contacts" onclick="showScreen('screen-contacts')"><i class="ti ti-users"></i><span>Circle</span></div>
+      <div class="nav-item" data-nav="screen-settings" onclick="showScreen('screen-settings')"><i class="ti ti-settings"></i><span>Settings</span></div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="screen" id="screen-map" style="padding:0;">
+    <div style="flex:1; display:flex; flex-direction:column;">
+      <div id="home-map-avatar-row" style="display:flex; gap:10px; padding:16px 20px 10px; overflow-x:auto; background:#fff;"></div>
+      <div id="home-map" style="flex:1; min-height:300px;"></div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="showScreen('screen-home')"><i class="ti ti-home"></i><span>Home</span></div>
+      <div class="nav-item active" onclick="showScreen('screen-map')"><i class="ti ti-map-pin"></i><span>Map</span></div>
+      <div class="nav-item" onclick="showScreen('screen-contacts')"><i class="ti ti-users"></i><span>Circle</span></div>
+      <div class="nav-item" onclick="showScreen('screen-settings')"><i class="ti ti-settings"></i><span>Settings</span></div>
+    </div>
+  </div>
+
+  <!-- CONTACTS / GUARDIANS (Family Circle) -->
+  <div class="screen" id="screen-contacts" style="padding-bottom:0;">
+    <div style="flex:1; padding: 28px 20px 8px; overflow-y:auto;">
+      <h1 class="app-title" style="font-size:19px;">Family Circle</h1>
+      <span class="circle-active-badge"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:var(--safe-green);display:inline-block;"></span> <span id="guardians-active-count">0</span> guardians active</span>
+      <div class="owner-card">
+        <div class="circle-avatar" style="background:var(--primary); position:static; margin-bottom:0;" id="owner-avatar">?</div>
+        <div><p class="contact-name" id="owner-name-display">You</p><p class="contact-phone" id="owner-device-display">This device</p></div>
+        <span class="owner-tag">Owner</span>
+      </div>
+      <p class="sub" style="margin-bottom:10px; text-transform:uppercase; font-size:11px; font-weight:700; letter-spacing:0.5px; color:var(--text-muted);">Your family circle</p>
+      <div id="contact-list"></div>
+      <button class="add-guardian-btn" id="add-family-member-btn" onclick="showAddContactPrompt()">+ Add New Family Member</button>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="showScreen('screen-home')"><i class="ti ti-home"></i><span>Home</span></div>
+      <div class="nav-item" onclick="showScreen('screen-map')"><i class="ti ti-map-pin"></i><span>Map</span></div>
+      <div class="nav-item active" onclick="showScreen('screen-contacts')"><i class="ti ti-users"></i><span>Circle</span></div>
+      <div class="nav-item" onclick="showScreen('screen-settings')"><i class="ti ti-settings"></i><span>Settings</span></div>
+    </div>
+  </div>
+
+  <!-- ADD CONTACT -->
+  <div class="screen" id="screen-add-contact">
+    <div class="back-row" onclick="showScreen('screen-contacts')"><i class="ti ti-arrow-left"></i><span>Back</span></div>
+    <h1 class="app-title" style="margin-top:14px;">Add a guardian</h1>
+    <label class="field-label">Name</label>
+    <input class="field" id="ac-name" type="text" placeholder="Guardian's name">
+    <label class="field-label">Phone number</label>
+    <input class="field" id="ac-phone" type="text" placeholder="+91 98765 43210">
+    <label class="field-label">Relationship</label>
+    <select class="field" id="ac-relationship">
+      <option value="">Select relationship</option>
+      <option>Parent</option><option>Sibling</option><option>Spouse/Partner</option>
+      <option>Friend</option><option>Relative</option><option>Other</option>
+    </select>
+    <div class="error-msg" id="ac-error"></div>
+    <button class="btn-primary" onclick="saveNewContact()">Save guardian</button>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="screen" id="screen-settings" style="padding-bottom:0;">
+    <div style="flex:1; padding: 28px 20px 8px; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h1 class="app-title" style="font-size:19px; margin-bottom:0;">Security Center</h1>
+        <button class="bell-btn" style="width:34px;height:34px;"><i class="ti ti-bell"></i></button>
+      </div>
+      <span class="secure-badge" style="margin-top:12px;"><span class="dot"></span> Secure connection</span>
+
+      <div class="profile-card">
+        <div class="profile-top">
+          <div class="profile-avatar" id="settings-profile-avatar">?</div>
+          <div>
+            <p class="profile-name" id="settings-profile-name">Your name</p>
+            <p class="profile-phone" id="settings-profile-phone">Phone not set</p>
+            <p class="profile-live"><span class="dot" style="width:6px;height:6px;border-radius:50%;background:#fff;display:inline-block;"></span> Live</p>
+          </div>
+        </div>
+      </div>
+      <div class="sec-row child-hide" onclick="showScreen('screen-guardians-setup')">
+        <span class="sec-row-label"><i class="ti ti-edit"></i> Edit Profile Info</span>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+
+      <div class="sec-section-label">Privacy &amp; Security</div>
+      <div class="sec-row" onclick="showQrCode()">
+        <span class="sec-row-label"><i class="ti ti-qrcode"></i> Link My Device</span>
+        <i class="ti ti-chevron-right"></i>
+      </div>
+      <p class="trusted-guardian-note"><strong>Trusted Guardians</strong> are permitted to view your live safety dashboard and track your location during emergencies.</p>
+      <button class="btn-secondary" onclick="showQrCode()"><i class="ti ti-qrcode" style="margin-right:6px;"></i> Show My QR Code</button>
+
+      <div id="qr-code-panel" style="display:none; text-align:center; margin-top:14px; background:#fff; border-radius:14px; padding:18px;">
+        <div id="qr-code-canvas-wrap"></div>
+        <p class="hint-text" style="margin-top:10px;">A guardian can scan this to instantly add you in their Guardian Dashboard - no typing the tracking ID needed.</p>
+      </div>
+
+      <div class="sec-section-label">Preferences</div>
+
+      <div class="toggle-row">
+        <div><p class="t-title">Shake to trigger SOS</p><p class="t-sub">Shake the phone hard to fire an SOS without opening the app <span class="status-chip" id="shake-chip" style="margin-top:4px;">Shake off</span></p></div>
+        <label class="switch"><input type="checkbox" id="toggle-shake" onchange="toggleShake(this.checked)"><span class="slider-el"></span></label>
+      </div>
+
+      <div class="toggle-row">
+        <div><p class="t-title">Voice-activated SOS</p><p class="t-sub">Say "Hey Raksha, help" to trigger SOS hands-free. Needs mic permission; keep the app open in the foreground.</p></div>
+        <label class="switch"><input type="checkbox" id="toggle-voice" onchange="toggleVoiceSOS(this.checked)"><span class="slider-el"></span></label>
+      </div>
+
+      <div class="toggle-row">
+        <div><p class="t-title">Safety check-in</p><p class="t-sub">Ask "are you safe?" on a timer; no response auto-triggers SOS</p></div>
+        <label class="switch"><input type="checkbox" id="toggle-checkin" onchange="toggleCheckin(this.checked)"><span class="slider-el"></span></label>
+      </div>
+
+      <div id="checkin-interval-wrap" style="display:none;">
+        <label class="field-label">Check in every (minutes, demo uses shorter test values)</label>
+        <select class="field" id="checkin-interval" onchange="setCheckinInterval(this.value)">
+          <option value="0.5">30 seconds (demo)</option>
+          <option value="1">1 minute (demo)</option>
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60">60 minutes</option>
+        </select>
+      </div>
+
+      <div class="toggle-row" style="border-bottom:none; flex-direction:column; align-items:flex-start; gap:6px;">
+        <p class="t-title">Your tracking ID</p>
+        <p class="t-sub" id="user-id-display" style="max-width:none;">Log in to generate one</p>
+        <button class="btn-secondary" style="margin-top:4px;" onclick="testLiveSync()">Test live sync connection</button>
+        <p class="t-sub" id="sync-test-result" style="max-width:none;"></p>
+      </div>
+
+      <div class="child-hide">
+        <label class="field-label" style="margin-top:18px;">App lock PIN (4 digits)</label>
+        <input class="field" id="settings-pin" type="tel" maxlength="4" placeholder="e.g. 1234" oninput="this.value=this.value.replace(/\D/g,'')">
+        <label class="field-label">Duress PIN (looks normal, silently sends SOS)</label>
+        <input class="field" id="settings-duress-pin" type="tel" maxlength="4" placeholder="e.g. 9999" oninput="this.value=this.value.replace(/\D/g,'')">
+        <div class="error-msg" id="settings-error"></div>
+        <button class="btn-primary" onclick="saveSettings()">Save settings</button>
+        <p class="hint-text">If both PINs are set, locking the app requires either. Entering the duress PIN unlocks normally but fires a silent SOS in the background.</p>
+
+        <div class="sec-section-label">Alert message</div>
+        <label class="field-label">Custom SOS message (leave blank for default)</label>
+        <textarea class="field" id="custom-sos-message" rows="3" placeholder="SAFETY ALERT: {name} has triggered an emergency SOS. Live location: {link}" style="resize:vertical;"></textarea>
+        <p class="hint-text">Use {name} and {link} as placeholders - they'll be filled in automatically.</p>
+
+        <div class="sec-section-label">Voice wake phrase language</div>
+        <select class="field" id="voice-language-select" onchange="setVoiceLanguage(this.value)">
+          <option value="en-US">English - "Hey Raksha, help"</option>
+          <option value="hi-IN">Hindi - "Raksha madad karo"</option>
+        </select>
+
+        <div class="sec-section-label">Your data</div>
+        <button class="btn-secondary" onclick="exportMyData()">Export my data (JSON)</button>
+        <button class="btn-secondary" style="color:var(--emergency); border-color:#f3cabb;" onclick="deleteEverything()">Delete everything &amp; sign out</button>
+
+        <div class="sec-section-label">Discreet tools</div>
+        <button class="btn-secondary" onclick="triggerFakeShutdown()"><i class="ti ti-power" style="margin-right:6px;"></i> Fake shutdown screen</button>
+        <p class="hint-text">Shows a convincing "powering off" black screen. Tap anywhere on it to return to the real app.</p>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="showScreen('screen-home')"><i class="ti ti-home"></i><span>Home</span></div>
+      <div class="nav-item" onclick="showScreen('screen-map')"><i class="ti ti-map-pin"></i><span>Map</span></div>
+      <div class="nav-item" onclick="showScreen('screen-contacts')"><i class="ti ti-users"></i><span>Circle</span></div>
+      <div class="nav-item active" onclick="showScreen('screen-settings')"><i class="ti ti-settings"></i><span>Settings</span></div>
+    </div>
+  </div>
+  <div class="screen" id="screen-history">
+    <div class="back-row" onclick="showScreen('screen-home')"><i class="ti ti-arrow-left"></i><span>Back</span></div>
+    <h1 class="app-title" style="margin-top:14px;">SOS history</h1>
+    <p class="sub">Every alert triggered this session</p>
+    <div id="history-list" style="flex:1; overflow-y:auto;"></div>
+  </div>
+
+  <!-- NEARBY -->
+  <div class="screen" id="screen-nearby" style="padding-bottom:0;">
+    <div style="flex:1; padding: 28px 20px 8px; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h1 class="app-title" style="font-size:19px; margin-bottom:0;">Nearby help</h1>
+        <button class="icon-btn" onclick="loadNearbyHelp()"><i class="ti ti-refresh"></i></button>
+      </div>
+      <p class="sub" style="margin-bottom:14px;" id="nearby-status">Finding real police stations and hospitals near you...</p>
+      <div id="nearby-list"></div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-item" onclick="showScreen('screen-home')"><i class="ti ti-home"></i><span>Home</span></div>
+      <div class="nav-item" onclick="showScreen('screen-map')"><i class="ti ti-map-pin"></i><span>Map</span></div>
+      <div class="nav-item" onclick="showScreen('screen-contacts')"><i class="ti ti-users"></i><span>Circle</span></div>
+      <div class="nav-item" onclick="showScreen('screen-settings')"><i class="ti ti-settings"></i><span>Settings</span></div>
+    </div>
+  </div>
+
+  <!-- SOS CHAT & VOICE CALL -->
+  <div class="screen" id="screen-sos-chat" style="padding-bottom:0;">
+    <div class="back-row" onclick="showScreen('screen-home')"><i class="ti ti-arrow-left"></i><span>Back</span></div>
+    <h1 class="app-title" style="margin-top:14px; font-size:19px;">Chat &amp; call with guardian</h1>
+    <p class="sub" style="margin-bottom:10px;">Real-time - your guardian sees this on their tracking page too</p>
+
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <button class="btn-primary" id="voice-call-btn" style="margin-top:0; flex:1;" onclick="startVoiceCall()"><i class="ti ti-phone" style="margin-right:6px;"></i> Start voice call</button>
+      <button class="btn-secondary" id="end-call-btn" style="margin-top:0; flex:1; display:none; color:var(--emergency); border-color:#f3cabb;" onclick="endVoiceCall()"><i class="ti ti-phone-off" style="margin-right:6px;"></i> End call</button>
+    </div>
+    <p class="hint-text" id="call-status-text" style="text-align:left; margin-top:0; margin-bottom:14px;"></p>
+    <audio id="remote-audio" autoplay></audio>
+
+    <div id="chat-message-list" style="flex:1; overflow-y:auto; background:#fff; border-radius:14px; padding:12px; margin-bottom:10px; min-height:200px;"></div>
+
+    <div style="display:flex; gap:8px; padding-bottom:16px;">
+      <input class="field" id="chat-input" type="text" placeholder="Type a message..." style="margin:0;" onkeypress="if(event.key==='Enter') sendChatMessage()">
+      <button class="btn-primary" style="margin-top:0; width:auto; padding:0 18px;" onclick="sendChatMessage()"><i class="ti ti-send"></i></button>
+    </div>
+  </div>
+
+  <!-- SAFETY QUIZ (for kids) -->
+  <!-- AI SAFETY ASSISTANT -->
+  <div class="screen" id="screen-ai-chat" style="padding-bottom:0;">
+    <div class="back-row" onclick="showScreen('screen-home')"><i class="ti ti-arrow-left"></i><span>Back</span></div>
+    <h1 class="app-title" style="margin-top:14px; font-size:19px;">Ask Raksha</h1>
+    <p class="sub" style="margin-bottom:10px;">A safety companion for questions, tips, or just talking something through.</p>
+
+    <div id="ai-chat-message-list" style="flex:1; overflow-y:auto; background:#fff; border-radius:14px; padding:12px; margin-bottom:10px; min-height:280px;"></div>
+
+    <div style="display:flex; gap:8px; padding-bottom:16px;">
+      <input class="field" id="ai-chat-input" type="text" placeholder="Ask something..." style="margin:0;" onkeypress="if(event.key==='Enter') sendAiChatMessage()">
+      <button class="btn-primary" style="margin-top:0; width:auto; padding:0 18px;" onclick="sendAiChatMessage()"><i class="ti ti-send"></i></button>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-safety-quiz">
+    <div class="back-row" onclick="showScreen('screen-home')"><i class="ti ti-arrow-left"></i><span>Back</span></div>
+    <h1 class="app-title" style="margin-top:14px;">Safety Quiz</h1>
+    <p class="sub">Fun questions to help you stay safe! Let's see how much you know.</p>
+
+    <div id="quiz-question-view">
+      <div class="info-card" style="margin:10px 0;">
+        <p style="font-size:12px; color:var(--text-muted); font-weight:600; margin-bottom:6px;">Question <span id="quiz-current-num">1</span> of <span id="quiz-total-num">5</span></p>
+        <p id="quiz-question-text" style="font-size:16px; font-weight:700; color:var(--text-dark); line-height:1.4;">Loading...</p>
+      </div>
+      <div id="quiz-options-list"></div>
+      <p class="error-msg" id="quiz-feedback" style="text-align:center; font-size:14px; font-weight:600;"></p>
+    </div>
+
+    <div id="quiz-results-view" style="display:none; text-align:center;">
+      <div class="status-shield" style="width:70px; height:70px; margin:20px auto; background:var(--primary);"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 5v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V5l-8-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <h2 style="font-size:20px; font-weight:800; margin-bottom:6px;">Great job!</h2>
+      <p style="font-size:15px; color:var(--text-muted); margin-bottom:20px;">You got <span id="quiz-score-text">0/5</span> right</p>
+      <button class="btn-primary" onclick="startSafetyQuiz()">Play again</button>
+      <button class="btn-secondary" onclick="showScreen('screen-home')">Back to home</button>
+    </div>
+  </div>
+
+  <!-- SAFE WALK (for kids, with a parent guardian) -->
+  <div class="screen" id="screen-safe-walk">
+    <div class="back-row" onclick="showScreen('screen-home')"><i class="ti ti-arrow-left"></i><span>Back</span></div>
+    <h1 class="app-title" style="margin-top:14px;">Safe Walk</h1>
+    <p class="sub">Pick where you're headed, and we'll let your parent know if you go off the path.</p>
+
+    <div id="safe-walk-setup">
+      <label class="field-label">Where are you walking to?</label>
+      <select class="field" id="safe-walk-destination-select">
+        <option value="">Select a saved place...</option>
+        <option value="home">🏠 Home</option>
+        <option value="school">🏫 School</option>
+      </select>
+      <div class="error-msg" id="safe-walk-error"></div>
+      <button class="btn-secondary" onclick="showScreen('screen-save-places')">Set up Home / School locations</button>
+      <button class="btn-primary" onclick="startSafeWalk()">Start Safe Walk</button>
+    </div>
+
+    <div id="safe-walk-active" style="display:none; flex:1; display:none; flex-direction:column;">
+      <div id="safe-walk-map" style="height:260px; border-radius:16px; margin-bottom:10px;"></div>
+      <div class="info-card" style="margin-bottom:10px;">
+        <div class="info-row"><span class="i-label">Status</span><span class="i-value" id="safe-walk-status-text">On track</span></div>
+        <div class="info-row"><span class="i-label">Distance to destination</span><span class="i-value" id="safe-walk-distance-text">--</span></div>
+      </div>
+      <button class="btn-primary" onclick="finishSafeWalk(true)">I've arrived safely</button>
+      <button class="btn-secondary" onclick="finishSafeWalk(false)">Cancel Safe Walk</button>
+    </div>
+  </div>
+
+  <!-- SAVE PLACES (Home/School setup for Safe Walk) -->
+  <div class="screen" id="screen-save-places">
+    <div class="back-row" onclick="showScreen('screen-safe-walk')"><i class="ti ti-arrow-left"></i><span>Back</span></div>
+    <h1 class="app-title" style="margin-top:14px;">Home &amp; School</h1>
+    <p class="sub">Set these once - Safe Walk uses them as destinations.</p>
+    <div class="info-card" style="margin-bottom:14px;">
+      <div class="info-row"><span class="i-label">🏠 Home</span><span class="i-value" id="saved-home-status">Not set</span></div>
+      <div class="info-row"><span class="i-label">🏫 School</span><span class="i-value" id="saved-school-status">Not set</span></div>
+    </div>
+    <button class="btn-primary" onclick="saveCurrentLocationAs('home')">Save my current location as Home</button>
+    <button class="btn-primary" onclick="saveCurrentLocationAs('school')">Save my current location as School</button>
+    <p class="hint-text">Stand at Home or School when you tap the button, so it saves the right spot.</p>
+  </div>
+
+  <!-- WALK ME HOME -->
+  <div class="screen" id="screen-walk-home">
+    <div class="back-row" onclick="showScreen('screen-home')"><i class="ti ti-arrow-left"></i><span>Back</span></div>
+    <h1 class="app-title" style="margin-top:14px;">Walk Me Home</h1>
+    <p class="sub">Set an expected arrival time. If you don't confirm you're safe by then, guardians get alerted automatically.</p>
+
+    <div id="walk-home-setup">
+      <label class="field-label">I expect to arrive in (minutes)</label>
+      <input class="field" id="walk-home-eta" type="number" min="1" value="15" style="text-align:left;">
+      <div class="error-msg" id="walk-home-error"></div>
+      <button class="btn-primary" onclick="startWalkMeHome()">Start</button>
+      <p class="hint-text">Note: this tracks whether you arrive by your ETA - it does not yet detect if you go off your actual route, since that needs a full directions/routing service. Arriving late (or not confirming) triggers the alert either way.</p>
+    </div>
+
+    <div id="walk-home-active" style="display:none;">
+      <div class="info-card" style="margin:10px 0;">
+        <div class="info-row"><span class="i-label">Status</span><span class="i-value" id="walk-home-status-text">Walking...</span></div>
+        <div class="info-row"><span class="i-label">Time remaining</span><span class="i-value" id="walk-home-remaining">--</span></div>
+      </div>
+      <button class="btn-primary" onclick="confirmArrivedSafely()">I've arrived safely</button>
+      <button class="btn-secondary" onclick="cancelWalkMeHome()">Cancel</button>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- CHECK-IN MODAL -->
+<div class="modal-overlay" id="checkin-modal">
+  <div class="modal-box">
+    <i class="ti ti-heart-question big-icon"></i>
+    <h3>Are you safe?</h3>
+    <p>Tap confirm or an SOS will be sent automatically.</p>
+    <div class="countdown-num" id="checkin-countdown">20</div>
+    <button class="btn-primary" onclick="confirmSafe()">Yes, I'm safe</button>
+  </div>
+</div>
+
+<!-- ONBOARDING WALKTHROUGH (shown once, after first signup) -->
+<div class="modal-overlay" id="onboarding-modal">
+  <div class="modal-box" style="text-align:left;">
+    <div id="onboarding-step-1">
+      <i class="ti ti-shield-check big-icon" style="text-align:center; display:block;"></i>
+      <h3 style="text-align:center;">Welcome to Raksha</h3>
+      <p style="text-align:center;">Tap the red SOS button any time you need help. It calls your top guardian and shares your live location instantly.</p>
+      <button class="btn-primary" onclick="onboardingNext(2)">Next</button>
+    </div>
+    <div id="onboarding-step-2" style="display:none;">
+      <i class="ti ti-map-pin big-icon" style="text-align:center; display:block;"></i>
+      <h3 style="text-align:center;">Map &amp; Circle</h3>
+      <p style="text-align:center;">The Map tab shows your live location. The Circle tab is your family/guardian list - add as many as you need.</p>
+      <button class="btn-primary" onclick="onboardingNext(3)">Next</button>
+    </div>
+    <div id="onboarding-step-3" style="display:none;">
+      <i class="ti ti-settings big-icon" style="text-align:center; display:block;"></i>
+      <h3 style="text-align:center;">Make it yours</h3>
+      <p style="text-align:center;">In Settings, turn on shake-to-SOS, voice-activated SOS, or set an app lock PIN - whatever fits how you'll actually use it.</p>
+      <button class="btn-primary" onclick="closeOnboarding()">Got it, let's go</button>
+    </div>
+  </div>
+</div>
+
+<!-- GUARDIAN JOIN ACKNOWLEDGMENT -->
+<div class="modal-overlay" id="join-ack-modal">
+  <div class="modal-box">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#4F3FE0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; margin:0 auto;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <h3>Join Family Circle?</h3>
+    <p id="join-ack-text">You're about to become a guardian and will be able to see live location and receive safety alerts.</p>
+    <button class="btn-primary" onclick="confirmGuardianJoin()">Yes, add me as a guardian</button>
+    <button class="btn-secondary" onclick="document.getElementById('join-ack-modal').classList.remove('show')">Cancel</button>
+  </div>
+</div>
+
+<!-- FAKE SHUTDOWN SCREEN -->
+<div id="fake-shutdown-overlay" style="display:none; position:fixed; inset:0; background:#000; z-index:9999; align-items:center; justify-content:center; flex-direction:column;">
+  <p id="fake-shutdown-text" style="color:#666; font-size:13px; margin-bottom:20px;">Powering off...</p>
+</div>
+
+<script>
+// ============================================================
+// SPLASH SCREEN SEQUENCE
+// ============================================================
+(function runSplashSequence() {
+  const HOLD_AFTER_TAGLINE_MS = 900;
+  const FADE_OUT_MS = 500;
+  setTimeout(() => {
+    const splash = document.getElementById('splash-screen');
+    if (!splash) return;
+    splash.classList.add('fade-out');
+    setTimeout(() => splash.remove(), FADE_OUT_MS);
+  }, 1550 + HOLD_AFTER_TAGLINE_MS);
+})();
+
+// ============================================================
+// GOOGLE SIGN-IN via Supabase
+// Fill these in with your own Supabase project (Settings -> API).
+// Until you do, the Google button will show an error when tapped,
+// but the rest of the app (email/password login) works unaffected.
+// ============================================================
+const SUPABASE_URL = "https://nkuuiiikddfhttjaieny.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rdXVpaWlrZGRmaHR0amFpZW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3NjczMTcsImV4cCI6MjEwMjM0MzMxN30.AICz7_C-OrMbRW8UqB4nlz4DkA-lWDZiI7PoEFkDeVQ";
+const supabaseClient = (typeof window.supabase !== 'undefined')
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
+
+async function signInWithGoogle() {
+  if (!supabaseClient) { alert('Supabase is not configured yet.'); return; }
+  // Marks this as a deliberate sign-in attempt, so the routing check
+  // after redirect knows to act on it - see checkGoogleSessionAndRoute.
+  try { sessionStorage.setItem('raksha_google_signin_attempted', 'true'); } catch (e) {}
+  const { error } = await supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href },
+  });
+  if (error) alert('Google sign-in failed: ' + error.message);
+}
+
+async function checkGoogleSessionAndRoute() {
+  if (!supabaseClient) return;
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) return; // not signed in via Google - email/password login still works as normal
+
+  // FIX: only auto-route if this app-load is genuinely the result of a
+  // deliberate "Sign in with Google" click - not just because a session
+  // happens to exist in storage. Without this check, ANY leftover
+  // session (including from an interrupted/broken redirect) would
+  // hijack routing on every single app open, even for people just
+  // using normal email/password login.
+  let deliberateSignIn = false;
+  try { deliberateSignIn = sessionStorage.getItem('raksha_google_signin_attempted') === 'true'; } catch (e) {}
+  if (!deliberateSignIn) return;
+  try { sessionStorage.removeItem('raksha_google_signin_attempted'); } catch (e) {}
+
+  const { data: profile, error } = await supabaseClient
+    .from('profiles')
+    .select('email, full_name, onboarding_completed')
+    .eq('id', session.user.id)
+    .single();
+  if (error || !profile) { console.warn('Could not load Google profile:', error); return; }
+
+  currentUser = {
+    name: profile.full_name || profile.email.split('@')[0],
+    email: profile.email,
+    id: currentUser?.id || generateUserId(),
+  };
+
+  if (profile.onboarding_completed) {
+    enterApp(currentUser.name);
+  } else {
+    showScreen('screen-guardians-setup');
+  }
+}
+
+// Clears any stuck Google session - use this once to escape a
+// hijacked-routing loop caused by an earlier interrupted sign-in.
+async function clearStuckGoogleSession() {
+  if (!supabaseClient) return;
+  await supabaseClient.auth.signOut();
+  try { sessionStorage.removeItem('raksha_google_signin_attempted'); } catch (e) {}
+  alert('Google session cleared. Reload the page and log in normally.');
+  window.location.reload();
+}
+
+async function markOnboardingComplete() {
+  if (!supabaseClient) return;
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) return;
+  await supabaseClient.from('profiles').update({ onboarding_completed: true }).eq('id', session.user.id);
+}
+
+if (supabaseClient) checkGoogleSessionAndRoute();
+
+// ============================================================
+// APPLY ADMIN-EDITED CONTENT - this was the missing piece: the admin
+// panel could SAVE to app_content, but nothing in the app ever READ it
+// back, so edits had zero visible effect. This fetches the current
+// values on every load and applies them to the relevant elements.
+// Public read access (no login needed) - see the RLS policy in the
+// Supabase setup SQL.
+// ============================================================
+async function applyAdminEditedContent() {
+  if (!supabaseClient) return;
+  try {
+    const { data: rows, error } = await supabaseClient.from('app_content').select('key, value');
+    if (error || !rows) { console.warn('Could not load admin content:', error); return; }
+
+    const contentMap = {};
+    rows.forEach(row => { contentMap[row.key] = row.value; });
+
+    if (contentMap.splash_app_name) {
+      const el = document.getElementById('splash-name');
+      if (el) el.textContent = contentMap.splash_app_name;
+    }
+    if (contentMap.tagline) {
+      const el = document.getElementById('splash-tagline');
+      if (el) el.textContent = contentMap.tagline;
+    }
+    if (contentMap.default_sos_message) {
+      // Only used as a fallback if the user hasn't set their own custom
+      // message in Settings - their personal choice always wins.
+      window._adminDefaultSosMessage = contentMap.default_sos_message;
+    }
+  } catch (e) {
+    console.warn('Could not apply admin content:', e);
+  }
+}
+applyAdminEditedContent();
+
+// ============================================================
+// LIVE LOCATION SYNC CONFIG
+// Fill these in with your own free Firebase project (see the
+// setup guide the assistant gave you). Until you do, the app
+// keeps working in local-only demo mode automatically.
+// ============================================================
+const FIREBASE_DB_URL = "https://ygfhdhhd-default-rtdb.firebaseio.com";
+const FIREBASE_DB_SECRET = "";   // only needed if your rules require auth on write
+// Fill this in with your real deployed Netlify URL once you have one,
+// e.g. "https://raksha-safety.netlify.app/" (include the trailing slash).
+// Until you set it, the app tries to auto-detect it from the current page,
+// which only works correctly once this file is actually deployed and
+// opened at a real https:// address - NOT when previewed inside a chat
+// tool, a sandbox, or opened directly from your file system, all of which
+// produce a broken/blank origin and would build a garbage tracking link.
+const SITE_URL_OVERRIDE = "https://rakshaa2.netlify.app/";
+const SITE_URL = SITE_URL_OVERRIDE || getAutoDetectedSiteUrl();
+
+function getAutoDetectedSiteUrl() {
+  const origin = window.location.origin;
+  const isRealHttpOrigin = origin && (origin.startsWith('http://') || origin.startsWith('https://'));
+  if (!isRealHttpOrigin) {
+    console.warn('Could not detect a real site URL (you are likely viewing this in a preview/sandbox, not a deployed site). Set SITE_URL_OVERRIDE once deployed.');
+    return '';
+  }
+  return origin + window.location.pathname.replace('index.html', '');
+}
+const LIVE_SYNC_ENABLED = FIREBASE_DB_URL.length > 0;
+let locationSyncTimer = null;
+
+// ---- persistence layer ----
+// Everything that used to be in-memory-only (users, their guardian list,
+// and critically their tracking ID) now survives page reloads / app
+// relaunches via localStorage. This matters a lot: if the tracking ID
+// changes between sessions, a link already sent to a guardian silently
+// points at a dead ID and location updates never reach it - which looks
+// exactly like "location isn't showing" with no visible error.
+const STORAGE_KEY = 'raksha_users_v1';
+
+function loadUsersFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.warn('localStorage unavailable - accounts and tracking ID will NOT persist across reloads:', e);
+    return {};
+  }
+}
+
+function saveUsersToStorage() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
+    return true;
+  } catch (e) {
+    console.warn('Could not save to localStorage - accounts and tracking ID will NOT persist:', e);
+    return false;
+  }
+}
+
+// ============================================================
+// ICON SYSTEM - replaces every icon-font glyph with inline SVG.
+// The external tabler-icons font has proven unreliable in some
+// browsers/environments (renders blank) - inline SVG has zero external
+// dependency and always renders. This runs once on load and converts
+// every <i class="ti ti-X"> element it finds automatically.
+// ============================================================
+const ICON_SVG_PATHS = {
+  'map-pin': '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+  'arrow-left': '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+  'users': '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  'settings': '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  'home': '<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>',
+  'vibrate': '<rect x="6" y="6" width="12" height="12" rx="2"/><line x1="2" y1="9" x2="2" y2="15"/><line x1="22" y1="9" x2="22" y2="15"/>',
+  'qrcode': '<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>',
+  'message-circle': '<path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>',
+  'eye': '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  'eye-off': '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
+  'chevron-right': '<polyline points="9 18 15 12 9 6"/>',
+  'bell': '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  'x': '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  'walk': '<circle cx="14" cy="4" r="2"/><path d="M15 6l-3 3-3 8"/><path d="M12 9l4 1 2 5"/><path d="M9 17l-3 3"/>',
+  'volume-3': '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19 12h.01"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>',
+  'trash': '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  'send': '<line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>',
+  'refresh': '<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>',
+  'power': '<path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>',
+  'player-stop': '<rect x="5" y="5" width="14" height="14" rx="2"/>',
+  'phone-off': '<path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.3 1.84.52 2.81.7A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.33A19.79 19.79 0 0 1 2 4.18 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.72c.12.9.35 1.78.68 2.61a2 2 0 0 1-.45 2.11L8 9.09"/><line x1="23" y1="1" x2="1" y2="23"/>',
+  'phone-call': '<path d="M15.05 5A5 5 0 0 1 19 8.95M15.05 1A9 9 0 0 1 23 8.94m-1 7.98v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  'phone': '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>',
+  'history': '<polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>',
+  'edit': '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/>',
+  'chevron-up': '<polyline points="18 15 12 9 6 15"/>',
+  'chevron-down': '<polyline points="6 9 12 15 18 9"/>',
+  'shield-check': '<path d="M12 2L4 5v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V5l-8-3z"/><path d="M9 12l2 2 4-4"/>',
+  'logout': '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>',
+  'plus': '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+};
+
+function iconToSvg(name) {
+  const inner = ICON_SVG_PATHS[name];
+  if (!inner) return null;
+  return `<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-0.125em;">${inner}</svg>`;
+}
+
+function replaceAllIconFonts() {
+  document.querySelectorAll('i[class*="ti-"]').forEach(el => {
+    if (el.dataset.iconManual) return; // password-toggle icons handle themselves
+    const match = el.className.match(/ti-([a-z0-9-]+)/);
+    if (!match) return;
+    const svg = iconToSvg(match[1]);
+    if (svg) el.outerHTML = svg;
+  });
+}
+
+// Dynamically-generated content (contact lists, history, nearby places,
+// etc.) creates new icon-font <i> elements after page load via
+// innerHTML - a one-time sweep would miss those. A MutationObserver
+// catches every insertion automatically, present and future.
+function setupIconAutoConvert() {
+  replaceAllIconFonts();
+  const observer = new MutationObserver(() => replaceAllIconFonts());
+  observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+}
+setupIconAutoConvert();
+
+// ---- QR code join detection ----
+// If this page was opened via a QR code (index.html?join=<ownerId>&owner=<name>),
+// jump straight to the login screen's Guardian flow with the owner's ID
+// already filled in, so scanning the code is a one-step action for the
+// guardian instead of them having to type the ID by hand.
+// ---- Child Mode ----
+// If opened via welcome.html's "I'm a Kid" choice (index.html?mode=child),
+// the app runs in a restricted view: all core safety features work
+// (SOS, Map, Circle viewing, Safe Walk, Safety Quiz), but anything that
+// changes settings, edits/removes guardians, or deletes data is hidden -
+// so a child can't accidentally (or deliberately) turn off their own
+// safety net.
+let isChildMode = false;
+function checkForChildMode() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('mode') === 'child') {
+    isChildMode = true;
+    try { localStorage.setItem('raksha_child_mode', 'true'); } catch (e) {}
+  } else {
+    try { isChildMode = localStorage.getItem('raksha_child_mode') === 'true'; } catch (e) {}
+  }
+}
+checkForChildMode();
+
+function applyChildModeRestrictions() {
+  if (!isChildMode) return;
+  document.body.classList.add('child-mode');
+  // Hide anything that edits/deletes guardians or account settings.
+  document.querySelectorAll('.child-hide').forEach(el => el.style.display = 'none');
+  const homeNav = document.querySelector('[data-nav="screen-settings"] span');
+  if (homeNav) homeNav.textContent = 'My Info';
+
+  // Friendlier copy throughout - same features, kinder words.
+  const statusTitle = document.getElementById('protected-status-title');
+  if (statusTitle) statusTitle.textContent = "You're Safe! 🌟";
+  const settingsTitle = document.querySelector('#screen-settings h1.app-title');
+  if (settingsTitle) settingsTitle.textContent = 'My Info';
+  const circleTitle = document.querySelector('#screen-contacts h1.app-title');
+  if (circleTitle) circleTitle.textContent = 'My Family';
+  const sosSubText = document.querySelector('.status-sos-row .sos-sub');
+  if (sosSubText) sosSubText.textContent = 'Tap if you need help!';
+}
+
+function checkForQrJoinLink() {
+  const params = new URLSearchParams(window.location.search);
+  const joinId = params.get('join');
+  const ownerName = params.get('owner');
+  if (joinId) {
+    window._qrJoinOwnerName = ownerName || 'this user';
+    showScreen('screen-login');
+    setLoginRole('guardian');
+    document.getElementById('guardian-login-id').value = joinId;
+    document.getElementById('guardian-login-id').readOnly = true;
+    const hint = document.getElementById('guardian-join-hint');
+    if (hint) { hint.textContent = `You're joining ${window._qrJoinOwnerName}'s Family Circle as a guardian.`; hint.style.display = 'block'; }
+  }
+}
+checkForQrJoinLink();
+
+let users = loadUsersFromStorage();
+let currentUser = null;
+let pendingGuardians = [];
+let contacts = [];
+let realLat = null, realLng = null;
+let sosHistory = [];
+let shakeEnabled = false, checkinEnabled = false, checkinIntervalMin = 15;
+let checkinTimerId, checkinCountdownId, checkinSecondsLeft = 20;
+let lastShakeTime = 0;
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'screen-contacts') renderContacts();
+  if (id === 'screen-history') renderHistory();
+  if (id === 'screen-nearby') loadNearbyHelp();
+  if (id === 'screen-map') initHomeMapIfNeeded();
+  if (id === 'screen-sos-chat') startChatPolling();
+  else stopChatPolling();
+  if (id === 'screen-safety-quiz') initSafetyQuizIfNeeded();
+  if (id === 'screen-save-places') renderSavedPlacesStatus();
+}
+
+// ---- signup flow ----
+function goToGuardianSetup() {
+  const name = document.getElementById('signup-name').value.trim();
+  const phone = document.getElementById('signup-phone').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const pass = document.getElementById('signup-pass').value;
+  const passConfirm = document.getElementById('signup-pass-confirm').value;
+  const termsChecked = document.getElementById('signup-terms').checked;
+  const errEl = document.getElementById('signup-error');
+  const btn = document.getElementById('signup-btn');
+
+  if (!name || !phone || !email || !pass || !passConfirm) { errEl.textContent = 'Fill in all fields to continue.'; return; }
+  if (!validateEmailField('signup-email', 'signup-email-err')) { errEl.textContent = 'Fix the email field above.'; return; }
+  if (pass.length < 8) { errEl.textContent = 'Password must be at least 8 characters.'; return; }
+  if (pass !== passConfirm) { errEl.textContent = 'Passwords do not match.'; return; }
+  if (!termsChecked) { errEl.textContent = 'Please check the box to continue.'; return; }
+  if (users[email]) { errEl.textContent = 'An account with this email already exists.'; return; }
+
+  errEl.textContent = '';
+  setButtonLoading(btn, true, 'Creating account...', 'Continue');
+  setTimeout(() => {
+    setButtonLoading(btn, false, 'Creating account...', 'Continue');
+    window._pendingSignup = { name, email, pass, phone };
+    pendingGuardians = [];
+    document.getElementById('guardian-form-list').innerHTML = '';
+    addGuardianField();
+    showScreen('screen-guardians-setup');
+  }, 500);
+}
+
+function addGuardianField() {
+  const idx = pendingGuardians.length;
+  pendingGuardians.push({ name: '', phone: '', relationship: '' });
+  const wrap = document.createElement('div');
+  wrap.className = 'guardian-card';
+  wrap.id = 'gcard-' + idx;
+  wrap.innerHTML = `
+    ${idx > 0 ? `<button class="remove-g" onclick="removeGuardianField(${idx})"><i class="ti ti-x"></i></button>` : ''}
+    <label class="field-label" style="margin-top:0;">Guardian's name</label>
+    <input class="field" placeholder="e.g. Priya" oninput="pendingGuardians[${idx}].name=this.value">
+    <label class="field-label">Phone number</label>
+    <input class="field" placeholder="+91 98765 43210" oninput="pendingGuardians[${idx}].phone=this.value">
+    <label class="field-label">Relationship</label>
+    <select class="field" onchange="pendingGuardians[${idx}].relationship=this.value">
+      <option value="">Select relationship</option>
+      <option>Parent</option><option>Sibling</option><option>Spouse/Partner</option>
+      <option>Friend</option><option>Relative</option><option>Other</option>
+    </select>`;
+  document.getElementById('guardian-form-list').appendChild(wrap);
+}
+
+function removeGuardianField(idx) {
+  pendingGuardians[idx] = null;
+  const el = document.getElementById('gcard-' + idx);
+  if (el) el.remove();
+}
+
+function finishSetup() {
+  const errEl = document.getElementById('guardian-error');
+  const valid = pendingGuardians.filter(g => g && g.name && g.phone && g.relationship);
+  if (valid.length === 0) { errEl.textContent = 'Add at least one guardian with all fields filled.'; return; }
+  errEl.textContent = '';
+  const { name, email, pass, phone } = window._pendingSignup;
+  const id = generateUserId(); // generated ONCE per account, then persisted forever
+  users[email] = { name, pass, phone, id, guardians: valid };
+  saveUsersToStorage();
+  contacts = valid;
+  currentUser = { name, email, phone, id };
+  enterApp(name);
+  maybeShowOnboarding();
+  markOnboardingComplete(); // no-op if this wasn't a Google sign-in
+}
+
+// ---- login role switch (user vs guardian) ----
+// The login screen serves two very different audiences: the person being
+// protected (User) and the people watching over them (Guardian). Guardians
+// don't have a password-based account in this demo - they just need the
+// tracking ID the user shared with them, plus their own name/phone so the
+// dashboard can identify them. Picking "Guardian" here swaps the form and,
+// on submit, sends them straight to guardian-dashboard.html instead of the
+// normal user home screen.
+let loginRole = 'user';
+function setLoginRole(role) {
+  loginRole = role;
+  document.getElementById('role-btn-user').classList.toggle('active', role === 'user');
+  document.getElementById('role-btn-guardian').classList.toggle('active', role === 'guardian');
+  document.getElementById('user-login-fields').style.display = role === 'user' ? '' : 'none';
+  document.getElementById('guardian-login-fields').style.display = role === 'guardian' ? '' : 'none';
+}
+
+function handleGuardianLogin() {
+  const idRaw = document.getElementById('guardian-login-id').value.trim();
+  const name = document.getElementById('guardian-login-name').value.trim();
+  const phone = document.getElementById('guardian-login-phone').value.trim();
+  const relationship = document.getElementById('guardian-login-relationship').value;
+  const errEl = document.getElementById('guardian-login-error');
+  errEl.textContent = '';
+
+  if (!idRaw) { errEl.textContent = 'Enter the tracking ID shared with you.'; return; }
+  if (!name) { errEl.textContent = 'Enter your name.'; return; }
+  if (!phone) { errEl.textContent = 'Enter your phone number.'; return; }
+
+  // Guardians may paste either a bare tracking ID (e.g. "u1a2b3c") or the
+  // full live-tracking link (".../track.html?id=u1a2b3c") - accept both.
+  const match = idRaw.match(/[?&]id=([^&]+)/);
+  const id = match ? decodeURIComponent(match[1]) : idRaw;
+
+  // Show the acknowledgment step before actually joining - matches "take
+  // an acknowledgment then add to family circle."
+  window._pendingGuardianJoin = { id, name, phone, relationship };
+  document.getElementById('join-ack-text').textContent =
+    `You're about to become a guardian for ${window._qrJoinOwnerName || 'this user'} and will be able to see their live location and receive safety alerts.`;
+  document.getElementById('join-ack-modal').classList.add('show');
+}
+
+async function confirmGuardianJoin() {
+  document.getElementById('join-ack-modal').classList.remove('show');
+  const { id, name, phone, relationship } = window._pendingGuardianJoin;
+
+  try {
+    localStorage.setItem('raksha_guardian_identity', JSON.stringify({ name, phone }));
+  } catch (e) {
+    console.warn('Could not save guardian identity to localStorage:', e.message);
+  }
+
+  // Write this guardian into the OWNER's Family Circle via Firebase, so
+  // it actually shows up in their app, not just a standalone dashboard
+  // view for the guardian themself.
+  if (LIVE_SYNC_ENABLED) {
+    const cleanedPhone = phone.replace(/\D/g, '');
+    try {
+      await fetch(`${FIREBASE_DB_URL}/family_circle_guardians/${id}/${cleanedPhone}.json?auth=${FIREBASE_DB_SECRET}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, relationship, joinedAt: Date.now(), acknowledged: true }),
+      });
+    } catch (e) {
+      console.warn('Could not sync guardian into owner Family Circle:', e);
+    }
+  }
+
+  window.location.href = `guardian-dashboard.html?id=${encodeURIComponent(id)}&label=${encodeURIComponent(name)}`;
+}
+
+// Called on the OWNER's side to pull in any guardians who joined via QR
+// code, merging them into the local contacts list so they show up in
+// Family Circle and actually receive SOS calls/SMS/WhatsApp like any
+// other guardian.
+async function syncLinkedGuardians() {
+  if (!LIVE_SYNC_ENABLED || !currentUser) return;
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/family_circle_guardians/${currentUser.id}.json?auth=${FIREBASE_DB_SECRET}`);
+    const data = await res.json();
+    if (!data) return;
+    let changed = false;
+    Object.values(data).forEach(g => {
+      const alreadyExists = contacts.some(c => c.phone.replace(/\D/g, '') === g.phone.replace(/\D/g, ''));
+      if (!alreadyExists) {
+        contacts.push({ name: g.name, phone: g.phone, relationship: g.relationship || 'Guardian' });
+        changed = true;
+      }
+    });
+    if (changed) { persistCurrentContacts(); renderContacts(); }
+  } catch (e) {
+    console.warn('Could not sync linked guardians:', e);
+  }
+}
+
+// ---- login/logout ----
+function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const remember = document.getElementById('login-remember').checked;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  errEl.style.color = '#E5484D';
+
+  if (!email || !pass) { errEl.textContent = 'Enter your email and password.'; return; }
+  if (!validateEmailField('login-email', 'login-email-err')) { errEl.textContent = 'Fix the email field above.'; return; }
+  if (!users[email] || users[email].pass !== pass) { errEl.textContent = 'Incorrect email or password, or account not created in this demo session yet.'; return; }
+
+  errEl.textContent = '';
+  setButtonLoading(btn, true, 'Logging in...', 'Log in');
+  setTimeout(() => {
+    setButtonLoading(btn, false, 'Logging in...', 'Log in');
+    const u = users[email];
+    if (!u.id) { u.id = generateUserId(); saveUsersToStorage(); } // backfill for older accounts
+    currentUser = { name: u.name, email, phone: u.phone, id: u.id };
+    contacts = u.guardians || [];
+    if (remember) console.log('Remember me checked - account already persists locally on this device via localStorage.');
+    enterApp(u.name);
+  }, 400);
+}
+
+function generateUserId() {
+  return 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+// Full round-trip test: writes a test value to Firebase, reads it back,
+// and reports exactly what failed in plain language - built specifically
+// for debugging "location isn't showing on the other phone" without
+// needing dev tools.
+async function testLiveSync() {
+  const resultEl = document.getElementById('sync-test-result');
+  resultEl.style.color = '#6b7280';
+
+  if (!LIVE_SYNC_ENABLED) {
+    resultEl.style.color = '#E5484D';
+    resultEl.textContent = 'FIREBASE_DB_URL is empty in the code - live sync was never configured.';
+    return;
+  }
+  if (!currentUser) {
+    resultEl.style.color = '#E5484D';
+    resultEl.textContent = 'Log in first so there is a tracking ID to test with.';
+    return;
+  }
+
+  resultEl.textContent = 'Testing... writing a value to Firebase...';
+  const testValue = Date.now();
+
+  try {
+    const writeRes = await fetch(`${FIREBASE_DB_URL}/sync_test/${currentUser.id}.json?auth=${FIREBASE_DB_SECRET}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(testValue),
+    });
+
+    if (!writeRes.ok) {
+      const body = await writeRes.text().catch(() => '');
+      resultEl.style.color = '#E5484D';
+      if (writeRes.status === 401 || writeRes.status === 403) {
+        resultEl.textContent = 'Write blocked (permission denied). Your Firebase Realtime Database rules likely still say ".write": false - go publish the rules from the setup guide.';
+      } else {
+        resultEl.textContent = `Write failed - HTTP ${writeRes.status}: ${body || 'no details returned'}`;
+      }
+      return;
+    }
+
+    resultEl.textContent = 'Write OK, reading it back...';
+    const readRes = await fetch(`${FIREBASE_DB_URL}/sync_test/${currentUser.id}.json?auth=${FIREBASE_DB_SECRET}`);
+    const readValue = await readRes.json();
+
+    if (readValue === testValue) {
+      resultEl.style.color = '#3b6d11';
+      resultEl.textContent = 'Success - your Firebase database is reachable and writable. If location still is not showing, the issue is GPS not being acquired on the phone sending SOS (check the location status text above the SOS button).';
+    } else {
+      resultEl.style.color = '#E5484D';
+      resultEl.textContent = 'Wrote successfully but the read-back value did not match - check your database rules allow reading "sync_test".';
+    }
+  } catch (e) {
+    resultEl.style.color = '#E5484D';
+    resultEl.textContent = 'Network request failed entirely: ' + e.message + '. Check FIREBASE_DB_URL is correct and this device has internet access.';
+  }
+}
+
+function togglePw(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const isPassword = input.type === 'password';
+  input.type = isPassword ? 'text' : 'password';
+  btn.innerHTML = iconToSvg(isPassword ? 'eye-off' : 'eye');
+}
+
+function validateEmailField(inputId, errId) {
+  const val = document.getElementById(inputId).value.trim();
+  const errEl = document.getElementById(errId);
+  if (!val) { errEl.textContent = ''; return true; }
+  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+  errEl.textContent = ok ? '' : 'Enter a valid email address.';
+  return ok;
+}
+
+function updatePwStrength() {
+  const val = document.getElementById('signup-pass').value;
+  const fill = document.getElementById('pw-strength-fill');
+  const label = document.getElementById('pw-strength-label');
+  let score = 0;
+  if (val.length >= 8) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
+
+  const levels = [
+    { pct: '0%', color: '#e0433d', text: 'Use 8+ characters with a number or symbol' },
+    { pct: '30%', color: '#e0433d', text: 'Weak - add numbers, symbols, or capitals' },
+    { pct: '60%', color: '#e6a23c', text: 'Okay - a bit more variety would help' },
+    { pct: '85%', color: '#67a854', text: 'Good password strength' },
+    { pct: '100%', color: '#2ecc71', text: 'Strong password' },
+  ];
+  const lvl = val.length === 0 ? levels[0] : levels[score] || levels[1];
+  fill.style.width = lvl.pct;
+  fill.style.background = lvl.color;
+  label.textContent = lvl.text;
+}
+
+function setButtonLoading(btn, isLoading, loadingText, normalText) {
+  btn.classList.toggle('loading', isLoading);
+  btn.textContent = isLoading ? loadingText : normalText;
+}
+
+function handleForgotPassword() {
+  const errEl = document.getElementById('login-error');
+  errEl.style.color = '#374151';
+  errEl.textContent = 'Password reset is not wired up in this demo yet.';
+}
+
+function enterApp(name) {
+  if (!currentUser.id) currentUser.id = generateUserId();
+  const firstName = name.split(' ')[0];
+  const initial = name.trim()[0]?.toUpperCase() || '?';
+  document.getElementById('home-greeting').textContent = 'Hi ' + firstName;
+  document.getElementById('header-avatar-btn').textContent = initial;
+  document.getElementById('owner-avatar').textContent = initial;
+  document.getElementById('owner-name-display').textContent = name;
+  document.getElementById('settings-profile-avatar').textContent = initial;
+  document.getElementById('settings-profile-name').textContent = name;
+  document.getElementById('settings-profile-phone').textContent = currentUser.phone || 'Phone not set';
+  document.getElementById('user-id-display').textContent = currentUser.id +
+    (LIVE_SYNC_ENABLED ? '' : ' (live sync not configured yet - see setup guide)');
+  const deviceLabel = detectDeviceLabel();
+  document.getElementById('device-label').textContent = deviceLabel;
+  document.getElementById('owner-device-display').textContent = deviceLabel;
+  showScreen('screen-home');
+  startLocationTracking();
+  startBatteryMonitoring();
+  startLocationSync();
+  renderContacts(); // populates the My Circle avatar row too
+  syncLinkedGuardians();
+  setInterval(syncLinkedGuardians, 15000); // pick up new QR-joined guardians without needing a refresh
+  applyChildModeRestrictions();
+}
+
+// Browsers no longer expose exact phone model names (e.g. "Galaxy S24")
+// for privacy reasons - this detects OS/browser family instead, which is
+// the honest, real information actually available from the web.
+function detectDeviceLabel() {
+  const ua = navigator.userAgent;
+  if (/android/i.test(ua)) return 'Android device';
+  if (/iphone/i.test(ua)) return 'iPhone';
+  if (/ipad/i.test(ua)) return 'iPad';
+  if (/windows/i.test(ua)) return 'Windows PC';
+  if (/macintosh/i.test(ua)) return 'Mac';
+  return 'This device';
+}
+
+function startLocationSync() {
+  clearInterval(locationSyncTimer);
+  if (!LIVE_SYNC_ENABLED) return;
+  locationSyncTimer = setInterval(pushLocationToFirebase, 10000);
+  pushLocationToFirebase();
+}
+
+async function pushLocationToFirebase(sosActive) {
+  const chip = document.getElementById('sync-chip');
+  if (!LIVE_SYNC_ENABLED) { chip.textContent = 'Off'; chip.style.color = '#ffdcdc'; return; }
+  if (!currentUser) return;
+  if (realLat == null) { chip.textContent = 'GPS...'; chip.style.color = '#ffdcdc'; return; }
+
+  const payload = {
+    latitude: realLat,
+    longitude: realLng,
+    updatedAt: Date.now(),
+    sosActive: !!sosActive,
+    userName: currentUser?.name || '',
+    userPhone: currentUser?.phone || '',
+  };
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/locations/${currentUser.id}.json?auth=${FIREBASE_DB_SECRET}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.warn('Firebase rejected the location write (status ' + res.status + '):', errText);
+      chip.textContent = 'Blocked';
+      chip.style.color = '#ffdcdc';
+      return;
+    }
+    chip.textContent = 'Live';
+    chip.style.color = '#fff';
+  } catch (e) {
+    console.warn('Live sync failed (check FIREBASE_DB_URL / internet):', e);
+    chip.textContent = 'Offline';
+    chip.style.color = '#ffdcdc';
+  }
+}
+
+function handleLogout() {
+  currentUser = null;
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+  stopCheckinTimer();
+  showScreen('screen-login');
+}
+
+// ---- real geolocation ----
+function startLocationTracking() {
+  const statusEl = document.getElementById('location-status');
+  if (!navigator.geolocation) { statusEl.textContent = 'Geolocation not supported on this device.'; return; }
+  navigator.geolocation.watchPosition(
+    (pos) => {
+      realLat = pos.coords.latitude;
+      realLng = pos.coords.longitude;
+      statusEl.textContent = 'Location active - accurate to ' + Math.round(pos.coords.accuracy) + 'm';
+      saveLastKnownLocation(realLat, realLng);
+    },
+    (error) => {
+      // Give the ACTUAL reason instead of a generic message - this is
+      // the difference between "permission denied" (fixable in browser
+      // settings) and "position unavailable" (often means the device's
+      // system-wide location mode is set to battery-saving/network-only
+      // instead of high-accuracy/GPS, which the app cannot control).
+      if (error.code === error.PERMISSION_DENIED) {
+        statusEl.textContent = 'Location permission denied - check your browser/app site permissions.';
+      } else if (error.code === error.POSITION_UNAVAILABLE) {
+        statusEl.textContent = 'GPS position unavailable - check your phone\'s location mode is set to "High accuracy," not battery-saving.';
+      } else if (error.code === error.TIMEOUT) {
+        statusEl.textContent = 'GPS timed out - try moving to an open area or tap Retry.';
+      } else {
+        statusEl.textContent = 'Location error - using last known location if available.';
+      }
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+  );
+}
+
+// Caches the last successful GPS fix to localStorage, so if SOS fires
+// with no current signal (tunnel, dead zone, permission hiccup), it can
+// still send a real, recent location instead of a generic fallback.
+const LAST_LOCATION_KEY = 'raksha_last_known_location';
+
+function saveLastKnownLocation(lat, lng) {
+  try {
+    localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ lat, lng, timestamp: Date.now() }));
+  } catch (e) { /* localStorage unavailable - not fatal, just no caching this session */ }
+}
+
+function getLastKnownLocation() {
+  try {
+    const raw = localStorage.getItem(LAST_LOCATION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+// ---- battery ----
+let lowBatteryAlertSent = false;
+
+function startBatteryMonitoring() {
+  const chip = document.getElementById('battery-chip');
+  if (navigator.getBattery) {
+    navigator.getBattery().then((battery) => {
+      const update = () => {
+        const pct = Math.round(battery.level * 100);
+        chip.textContent = pct + '%';
+        chip.style.color = pct < 20 ? '#ffdcdc' : '#fff';
+        window._lastBatteryPct = pct;
+
+        // If SOS is active and battery is critically low, warn guardians
+        // once (not repeatedly) that the phone may die soon.
+        if (sosActive && pct <= 15 && !lowBatteryAlertSent) {
+          lowBatteryAlertSent = true;
+          sendSOSSms('low-battery');
+        }
+        if (pct > 15) lowBatteryAlertSent = false; // reset if it somehow recovers (e.g. plugged in)
+      };
+      update();
+      battery.addEventListener('levelchange', update);
+    });
+  } else {
+    chip.textContent = 'n/a';
+  }
+}
+
+// ---- shake to SOS ----
+function toggleShake(enabled) {
+  shakeEnabled = enabled;
+  const chip = document.getElementById('shake-chip');
+  if (enabled) {
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission().then((state) => {
+        if (state === 'granted') { window.addEventListener('devicemotion', handleMotion); chip.textContent = 'Shake on'; chip.className = 'status-chip good'; }
+        else { document.getElementById('toggle-shake').checked = false; shakeEnabled = false; }
+      });
+    } else {
+      window.addEventListener('devicemotion', handleMotion);
+      chip.innerHTML = '<i class="ti ti-vibrate"></i> Shake on';
+      chip.className = 'status-chip good';
+    }
+  } else {
+    window.removeEventListener('devicemotion', handleMotion);
+    chip.innerHTML = '<i class="ti ti-vibrate"></i> Shake off';
+    chip.className = 'status-chip';
+  }
+}
+
+function handleMotion(e) {
+  const a = e.accelerationIncludingGravity;
+  if (!a) return;
+  const total = Math.abs(a.x) + Math.abs(a.y) + Math.abs(a.z);
+  const now = Date.now();
+  if (total > 35 && now - lastShakeTime > 4000) {
+    lastShakeTime = now;
+    triggerSOS('shake');
+  }
+}
+
+// ---- voice-activated SOS ----
+// Uses the Web Speech API's continuous recognition to listen for a wake
+// phrase. Support varies by browser (works in Chrome/Android WebView
+// with the Google speech engine; not supported in all browsers/iOS
+// Safari). Only works while this page is open and in the foreground -
+// browsers do not allow background/always-on listening for privacy
+// reasons, so this is a "keep the app open" feature, not a true
+// background wake-word like a smart speaker.
+let voiceRecognition = null;
+let voiceEnabled = false;
+const WAKE_PHRASES = ['hey raksha help', 'raksha help', 'hey raksha, help'];
+const WAKE_PHRASES_HI = ['raksha madad karo', 'madad karo', 'raksha madad'];
+let voiceLanguage = 'en-US';
+
+function setVoiceLanguage(lang) {
+  voiceLanguage = lang;
+  if (voiceRecognition) { toggleVoiceSOS(false); toggleVoiceSOS(true); } // restart with new language if already running
+}
+
+function toggleVoiceSOS(enabled) {
+  voiceEnabled = enabled;
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (enabled) {
+    if (!SpeechRecognition) {
+      alert('Voice recognition is not supported in this browser. Try Chrome on Android.');
+      document.getElementById('toggle-voice').checked = false;
+      voiceEnabled = false;
+      return;
+    }
+    voiceRecognition = new SpeechRecognition();
+    voiceRecognition.continuous = true;
+    voiceRecognition.interimResults = false;
+    voiceRecognition.lang = voiceLanguage;
+
+    voiceRecognition.onresult = (event) => {
+      const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase().trim();
+      console.log('Voice heard:', transcript);
+      if (WAKE_PHRASES.some(phrase => transcript.includes(phrase)) || WAKE_PHRASES_HI.some(phrase => transcript.includes(phrase))) {
+        triggerSOS('voice');
+      }
+    };
+    voiceRecognition.onerror = (event) => {
+      console.warn('Voice recognition error:', event.error);
+      // 'no-speech' fires constantly during normal silence - restart quietly.
+      if (voiceEnabled && event.error !== 'aborted') {
+        try { voiceRecognition.start(); } catch (e) {}
+      }
+    };
+    voiceRecognition.onend = () => {
+      // Browsers auto-stop recognition after a while - restart it if the
+      // user still has the toggle on.
+      if (voiceEnabled) {
+        try { voiceRecognition.start(); } catch (e) {}
+      }
+    };
+
+    try {
+      voiceRecognition.start();
+    } catch (e) {
+      alert('Could not start voice recognition: ' + e.message);
+      document.getElementById('toggle-voice').checked = false;
+      voiceEnabled = false;
+    }
+  } else {
+    voiceEnabled = false;
+    if (voiceRecognition) {
+      try { voiceRecognition.stop(); } catch (e) {}
+      voiceRecognition = null;
+    }
+  }
+}
+
+// ---- walk me home ----
+// Tracks whether the user arrives by a self-set ETA. If the ETA passes
+// without the user confirming they're safe, it auto-triggers SOS. Note:
+// this checks ARRIVAL TIME, not actual route adherence - true "did they
+// go off their path" detection would need a real directions/routing API
+// (e.g. Google Directions) to compare live position against a planned
+// route, which isn't currently integrated. This is an honest, simpler
+// version: "did you arrive when you said you would."
+let walkHomeTimer = null;
+let walkHomeCountdownTimer = null;
+let walkHomeEndTime = null;
+
+function startWalkMeHome() {
+  const etaMinutes = parseInt(document.getElementById('walk-home-eta').value, 10);
+  const errEl = document.getElementById('walk-home-error');
+  if (!etaMinutes || etaMinutes < 1) { errEl.textContent = 'Enter a valid number of minutes.'; return; }
+  errEl.textContent = '';
+
+  walkHomeEndTime = Date.now() + etaMinutes * 60000;
+  document.getElementById('walk-home-setup').style.display = 'none';
+  document.getElementById('walk-home-active').style.display = 'block';
+  document.getElementById('walk-home-status-text').textContent = 'Walking - all good';
+
+  clearTimeout(walkHomeTimer);
+  walkHomeTimer = setTimeout(() => {
+    document.getElementById('walk-home-status-text').textContent = 'Overdue - triggering SOS';
+    triggerSOS('walk-me-home-overdue');
+  }, etaMinutes * 60000);
+
+  clearInterval(walkHomeCountdownTimer);
+  walkHomeCountdownTimer = setInterval(updateWalkHomeCountdown, 1000);
+  updateWalkHomeCountdown();
+}
+
+function updateWalkHomeCountdown() {
+  const remainingMs = walkHomeEndTime - Date.now();
+  const el = document.getElementById('walk-home-remaining');
+  if (remainingMs <= 0) { el.textContent = 'Overdue'; return; }
+  const mins = Math.floor(remainingMs / 60000);
+  const secs = Math.floor((remainingMs % 60000) / 1000);
+  el.textContent = `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
+function confirmArrivedSafely() {
+  clearTimeout(walkHomeTimer);
+  clearInterval(walkHomeCountdownTimer);
+  document.getElementById('walk-home-setup').style.display = 'block';
+  document.getElementById('walk-home-active').style.display = 'none';
+  document.getElementById('walk-home-eta').value = 15;
+  console.log('Walk Me Home: user confirmed safe arrival, no SOS triggered.');
+}
+
+function cancelWalkMeHome() {
+  clearTimeout(walkHomeTimer);
+  clearInterval(walkHomeCountdownTimer);
+  document.getElementById('walk-home-setup').style.display = 'block';
+  document.getElementById('walk-home-active').style.display = 'none';
+}
+
+// ---- emergency services deep-link ----
+function call112() {
+  window.location.href = 'tel:112';
+}
+
+// ---- QR code for guardian linking ----
+// Encodes the guardian-facing link (guardian-dashboard.html?id=...&label=...)
+// so a guardian can scan it with their phone camera and be taken straight
+// to the login screen's Guardian flow with the ID pre-filled - no typing.
+function showQrCode() {
+  const panel = document.getElementById('qr-code-panel');
+  const wrap = document.getElementById('qr-code-canvas-wrap');
+  const isShowing = panel.style.display === 'block';
+  if (isShowing) { panel.style.display = 'none'; return; }
+
+  if (!currentUser || !currentUser.id) {
+    alert('Log in first so a tracking ID exists to encode.');
+    return;
+  }
+  if (typeof QRCode === 'undefined') {
+    wrap.innerHTML = '<p class="hint-text">QR library did not load - check your internet connection.</p>';
+    panel.style.display = 'block';
+    return;
+  }
+
+  wrap.innerHTML = '';
+  const qrUrl = `${SITE_URL || window.location.href}index.html?join=${encodeURIComponent(currentUser.id)}&owner=${encodeURIComponent(currentUser.name || 'this user')}`;
+  new QRCode(wrap, { text: qrUrl, width: 180, height: 180, colorDark: '#1A1A2E', colorLight: '#ffffff' });
+  panel.style.display = 'block';
+}
+
+// ---- siren / alarm sound ----
+// Generates a loud alternating-tone siren using the Web Audio API - no
+// audio file needed, works offline. Useful both to draw attention from
+// people nearby and to startle/deter a threat.
+let sirenAudioCtx = null, sirenOscillator = null, sirenInterval = null;
+
+function toggleSiren() {
+  if (sirenOscillator) {
+    stopSiren();
+    document.getElementById('siren-label').textContent = 'Loud siren';
+    document.getElementById('siren-card').style.background = '';
+  } else {
+    startSiren();
+    document.getElementById('siren-label').textContent = 'Stop siren';
+    document.getElementById('siren-card').style.background = '#FDECEC';
+  }
+}
+
+function startSiren() {
+  sirenAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  sirenOscillator = sirenAudioCtx.createOscillator();
+  const gain = sirenAudioCtx.createGain();
+  gain.gain.value = 0.3;
+  sirenOscillator.connect(gain);
+  gain.connect(sirenAudioCtx.destination);
+  sirenOscillator.type = 'sine';
+  sirenOscillator.frequency.value = 800;
+  sirenOscillator.start();
+
+  let high = true;
+  sirenInterval = setInterval(() => {
+    if (sirenOscillator) {
+      sirenOscillator.frequency.setValueAtTime(high ? 1200 : 700, sirenAudioCtx.currentTime);
+      high = !high;
+    }
+  }, 400);
+}
+
+function stopSiren() {
+  clearInterval(sirenInterval);
+  if (sirenOscillator) { try { sirenOscillator.stop(); } catch (e) {} }
+  if (sirenAudioCtx) { try { sirenAudioCtx.close(); } catch (e) {} }
+  sirenOscillator = null;
+  sirenAudioCtx = null;
+}
+
+// ---- Map screen (live self-location; circle members shown once they're
+// also Raksha users pushing their own location - see honest note below) ----
+let homeMapInstance = null, homeMapMarker = null;
+
+function initHomeMapIfNeeded() {
+  if (homeMapInstance) { setTimeout(() => homeMapInstance.invalidateSize(), 50); renderHomeMapAvatarRow(); return; }
+  if (typeof L === 'undefined') { loadLeafletThenInitMap(); return; }
+
+  if (realLat == null) {
+    // Don't silently show a fake default location - be honest that GPS
+    // hasn't provided a real fix yet, and keep checking every 2 seconds
+    // until it does.
+    document.getElementById('home-map').innerHTML =
+      '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:20px; text-align:center; color:var(--text-muted); font-size:13px;">' +
+      'Waiting for GPS...<br><span style="font-size:11.5px;">Check your phone\'s location mode is set to "High accuracy," not battery-saving.</span>' +
+      '<button class="btn-secondary" style="margin-top:14px; width:auto; padding:8px 16px;" onclick="initHomeMapIfNeeded()">Retry now</button></div>';
+    setTimeout(() => { if (realLat != null) initHomeMapIfNeeded(); }, 2000);
+    return;
+  }
+
+  homeMapInstance = L.map('home-map').setView([realLat, realLng], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(homeMapInstance);
+  const youIcon = L.divIcon({
+    className: '',
+    html: '<div style="width:28px;height:28px;border-radius:50%;background:#4F3FE0;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>',
+    iconSize: [28, 28], iconAnchor: [14, 14],
+  });
+  homeMapMarker = L.marker([realLat, realLng], { icon: youIcon }).addTo(homeMapInstance).bindPopup('You');
+  renderHomeMapAvatarRow();
+}
+
+function loadLeafletThenInitMap() {
+  if (document.getElementById('leaflet-css-link')) return; // already loading
+  const cssLink = document.createElement('link');
+  cssLink.id = 'leaflet-css-link';
+  cssLink.rel = 'stylesheet';
+  cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+  document.head.appendChild(cssLink);
+  const script = document.createElement('script');
+  script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+  script.onload = () => initHomeMapIfNeeded();
+  document.body.appendChild(script);
+}
+
+function renderHomeMapAvatarRow() {
+  const row = document.getElementById('home-map-avatar-row');
+  if (!row) return;
+  const you = document.createElement('div');
+  you.style.cssText = 'display:flex;flex-direction:column;align-items:center;flex-shrink:0;';
+  you.innerHTML = `<div class="circle-avatar" style="background:var(--primary); position:relative; margin-bottom:4px;">Y<span class="live-dot"></span></div><span style="font-size:11px;color:var(--text-muted);">You</span>`;
+  row.innerHTML = '';
+  row.appendChild(you);
+  contacts.forEach((c, i) => {
+    const initial = c.name.trim()[0]?.toUpperCase() || '?';
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;flex-direction:column;align-items:center;flex-shrink:0;';
+    item.innerHTML = `<div class="circle-avatar" style="background:${avatarColorFor(i)}; opacity:0.5; margin-bottom:4px;">${initial}</div><span style="font-size:10.5px;color:var(--text-muted);">Not linked</span>`;
+    item.title = `${c.name} needs their own Raksha account to show live here`;
+    row.appendChild(item);
+  });
+}
+
+// Called every time the Map screen is shown (hooked into showScreen below).
+function updateHomeMapPosition() {
+  if (homeMapInstance && homeMapMarker && realLat != null) {
+    homeMapMarker.setLatLng([realLat, realLng]);
+  }
+}
+setInterval(updateHomeMapPosition, 5000);
+
+// ---- check-in timer ----
+function toggleCheckin(enabled) {
+  checkinEnabled = enabled;
+  document.getElementById('checkin-interval-wrap').style.display = enabled ? 'block' : 'none';
+  if (enabled) startCheckinTimer(); else stopCheckinTimer();
+}
+function setCheckinInterval(val) { checkinIntervalMin = parseFloat(val); if (checkinEnabled) startCheckinTimer(); }
+function startCheckinTimer() {
+  clearTimeout(checkinTimerId);
+  checkinTimerId = setTimeout(showCheckinPrompt, checkinIntervalMin * 60 * 1000);
+}
+function stopCheckinTimer() { clearTimeout(checkinTimerId); clearInterval(checkinCountdownId); document.getElementById('checkin-modal').classList.remove('show'); }
+function showCheckinPrompt() {
+  document.getElementById('checkin-modal').classList.add('show');
+  checkinSecondsLeft = 20;
+  document.getElementById('checkin-countdown').textContent = checkinSecondsLeft;
+  checkinCountdownId = setInterval(() => {
+    checkinSecondsLeft--;
+    document.getElementById('checkin-countdown').textContent = checkinSecondsLeft;
+    if (checkinSecondsLeft <= 0) {
+      clearInterval(checkinCountdownId);
+      document.getElementById('checkin-modal').classList.remove('show');
+      triggerSOS('missed-checkin');
+      startCheckinTimer();
+    }
+  }, 1000);
+}
+function confirmSafe() {
+  clearInterval(checkinCountdownId);
+  document.getElementById('checkin-modal').classList.remove('show');
+  startCheckinTimer();
+}
+
+// ---- settings ----
+function saveSettings() {
+  const pin = document.getElementById('settings-pin').value;
+  const duress = document.getElementById('settings-duress-pin').value;
+  const errEl = document.getElementById('settings-error');
+  if (pin && pin.length !== 4) { errEl.textContent = 'App lock PIN must be 4 digits.'; return; }
+  if (duress && duress.length !== 4) { errEl.textContent = 'Duress PIN must be 4 digits.'; return; }
+  if (pin && duress && pin === duress) { errEl.textContent = 'Duress PIN must be different from your normal PIN.'; return; }
+  errEl.textContent = '';
+  window._appLockPin = pin;
+  window._duressPin = duress;
+  window._customSosMessage = document.getElementById('custom-sos-message').value.trim();
+  try { localStorage.setItem('raksha_custom_message', window._customSosMessage); } catch (e) {}
+  showScreen('screen-home');
+}
+
+// ---- data export / delete ----
+function exportMyData() {
+  const exportData = {
+    exportedAt: new Date().toISOString(),
+    user: currentUser ? { name: currentUser.name, email: currentUser.email, phone: currentUser.phone, id: currentUser.id } : null,
+    guardians: contacts,
+    sosHistory: sosHistory,
+  };
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'raksha-my-data.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function deleteEverything() {
+  if (!confirm('This deletes your account data from this device and signs you out. This cannot be undone. Continue?')) return;
+  try { localStorage.clear(); } catch (e) {}
+  users = {};
+  currentUser = null;
+  contacts = [];
+  sosHistory = [];
+  window.location.reload();
+}
+
+// ---- SOS ----
+// Flow: first SOS trigger (manual, shake, or missed check-in) ->
+//   1. ONE authentication voice call per guardian via the ElevenLabs agent
+//   2. An immediate SMS with the live tracking link
+//   3. A follow-up SMS every 60 seconds with the current location, until
+//      cancelled with "I'm safe - cancel SOS"
+// Repeated triggers while SOS is already active just keep the location
+// fresh - they don't place another call or reset the SMS timer.
+let sosActive = false;
+let recurringSmsTimer = null;
+
+function triggerSOS(source) {
+  const btn = document.getElementById('sos-button');
+  btn.classList.add('triggered');
+  setTimeout(() => btn.classList.remove('triggered'), 500);
+
+  const labelMap = {
+    manual: 'Manual SOS', shake: 'Shake-triggered SOS', 'missed-checkin': 'Missed check-in SOS',
+    duress: 'Duress PIN SOS', voice: 'Voice-activated SOS', 'walk-me-home-overdue': 'Walk Me Home overdue SOS',
+  };
+  const trackingLink = buildTrackingLink();
+
+  pushLocationToFirebase(true);
+
+  const banner = document.getElementById('sos-banner');
+  const primaryGuardian = contacts[0];
+  document.getElementById('sos-banner-text').textContent = (labelMap[source] || 'SOS') + ' active.' +
+    (primaryGuardian ? ` Calling ${primaryGuardian.name} now...` : ' Guardians are being notified.');
+  document.getElementById('tracking-link-box').textContent = trackingLink +
+    (LIVE_SYNC_ENABLED ? '' : ' (one-time pin - set up live sync for a real-time link)');
+  window._lastTrackingLink = trackingLink;
+  banner.classList.add('show');
+  document.getElementById('cancel-sos-card').style.display = 'block';
+
+  sosHistory.unshift({ type: labelMap[source] || 'SOS', time: new Date().toLocaleString(), link: trackingLink });
+  console.log('SOS triggered (' + source + '). Guardians who would be notified:', contacts);
+
+  // Offline fallback: if there's no internet at all, the backend fetch
+  // calls (call/SMS/Firebase) will simply fail - but a plain sms: link
+  // only needs cellular signal, not internet, so it still works. Opens
+  // the phone's native SMS app pre-filled with the alert + best
+  // available location (live if we have it, cached last-known if not).
+  if (!navigator.onLine && primaryGuardian) {
+    const smsBody = encodeURIComponent(
+      `SAFETY ALERT: ${currentUser?.name || 'I'} triggered SOS but have no internet right now. Last known location: ${trackingLink}`
+    );
+    setTimeout(() => {
+      window.location.href = `sms:${primaryGuardian.phone.replace(/\s+/g, '')}?body=${smsBody}`;
+    }, 900); // slight delay after the tel: link so both don't collide
+  }
+
+  if (!sosActive) {
+    sosActive = true;
+    runSOSSequence(source, trackingLink);
+    startAcknowledgmentPolling();
+  }
+}
+
+// The FIRST/initial SMS is no longer sent by this code at all - that job
+// now belongs to the SamvaadKaro agent's "send_sos_sms" Function, which
+// fires it only once the guardian's identity is actually verified
+// mid-call (see agent-confirm-guardian.js). Sending an immediate SMS
+// here too would mean two separate alert texts going out. This function
+// just places the call, then starts the ongoing 60-second location
+// updates - the verified first alert comes from the call itself.
+let escalationTimer = null;
+
+async function runSOSSequence(source, trackingLink) {
+  await placeSOSVoiceCalls(source, trackingLink);   // call placed - agent's Function sends the first SMS once verified
+  recurringSmsTimer = setInterval(() => sendSOSSms('update'), 60000); // ongoing location updates every minute
+
+  // Escalation: if SOS is STILL active 30 minutes after the initial
+  // SamvaadKaro call (i.e. never cancelled with "I'm safe"), automatically
+  // trigger the in-app WebRTC call as a second, different channel - "the
+  // Raksha portal" itself calling, distinct from SamvaadKaro's phone call.
+  // This only actually connects if the guardian has the tracking page
+  // open in a browser tab at that moment (it shows an incoming-call
+  // banner) - it can't ring their phone the way the SamvaadKaro call does,
+  // since that's the nature of a browser-based WebRTC call.
+  clearTimeout(escalationTimer);
+  escalationTimer = setTimeout(() => {
+    if (sosActive) {
+      console.log('30 minutes elapsed with SOS still active - escalating via in-app WebRTC call.');
+      startVoiceCall();
+    }
+  }, 30 * 60 * 1000);
+}
+
+function buildTrackingLink() {
+  let lat = realLat, lng = realLng;
+  if (lat == null) {
+    const cached = getLastKnownLocation();
+    if (cached) { lat = cached.lat; lng = cached.lng; }
+  }
+  lat = lat ?? 28.6139;
+  lng = lng ?? 77.2090;
+  const staticMapsLink = `https://maps.google.com/?q=${lat},${lng}`;
+  const canBuildLiveLink = LIVE_SYNC_ENABLED && SITE_URL;
+  return canBuildLiveLink ? `${SITE_URL}track.html?id=${currentUser.id}` : staticMapsLink;
+}
+
+function cancelSOS() {
+  sosActive = false;
+  clearInterval(recurringSmsTimer);
+  recurringSmsTimer = null;
+  clearInterval(ackPollTimer);
+  clearTimeout(escalationTimer);
+  document.getElementById('sos-banner').classList.remove('show');
+  document.getElementById('cancel-sos-card').style.display = 'none';
+  document.getElementById('ack-status').style.display = 'none';
+  pushLocationToFirebase(false);
+  console.log('SOS cancelled by user - recurring SMS and escalation timer stopped.');
+}
+
+// ---- guardian acknowledgment ----
+// Polls Firebase to see if the guardian has tapped "I've seen this, I'm
+// on it" on the track.html page - lets the user know someone actually
+// responded, not just that a link was sent.
+let ackPollTimer = null;
+
+function startAcknowledgmentPolling() {
+  clearInterval(ackPollTimer);
+  checkAcknowledgment();
+  ackPollTimer = setInterval(checkAcknowledgment, 10000);
+}
+
+async function checkAcknowledgment() {
+  if (!LIVE_SYNC_ENABLED || !currentUser) return;
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/locations/${currentUser.id}/acknowledged.json?auth=${FIREBASE_DB_SECRET}`);
+    const data = await res.json();
+    const ackEl = document.getElementById('ack-status');
+    if (data && data.ackAt) {
+      const agoSec = Math.round((Date.now() - data.ackAt) / 1000);
+      const agoText = agoSec < 60 ? `${agoSec}s ago` : `${Math.round(agoSec / 60)} min ago`;
+      ackEl.textContent = `✓ A guardian acknowledged this alert ${agoText}`;
+      ackEl.style.display = 'block';
+    }
+  } catch (e) { /* not critical if this check fails */ }
+}
+
+// This places ONE automated authentication call per guardian using your
+// ElevenLabs agent. Suggested script for your agent's first message
+// (set this in the ElevenLabs dashboard, not here):
+//   "This is an automated call from Raksha for authentication purposes.
+//    {{user_name}} may be in an emergency. Please state your name to confirm
+//    you received this alert." -- then the agent should end the call.
+async function placeSOSVoiceCalls(source, trackingLink) {
+  if (!contacts.length) return;
+  try {
+    // Uses SamvaadKaro's leads/campaign endpoint - confirmed via testing
+    // to actually place real calls through campaign_id 20 (the SOS
+    // agent's campaign), unlike the direct verify-order endpoint which
+    // is currently stuck on a "duplicate verification" account bug.
+    const res = await fetch('/.netlify/functions/send-sos-lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userName: currentUser?.name || 'Someone using Raksha',
+        guardians: contacts.map(c => ({ name: c.name, phone: c.phone })),
+        reason: source,
+      }),
+    });
+    const data = await res.json();
+    console.log('SamvaadKaro call-enrollment result:', data);
+  } catch (e) {
+    console.warn('SOS voice call failed (needs your backend deployed with the function + SamvaadKaro credentials):', e);
+  }
+}
+
+// Sends (or would send, until you add your SMS credentials) a text with
+// the current live location. Called once immediately, then every 60s.
+async function sendSOSSms(kind) {
+  if (!contacts.length) return;
+  const trackingLink = buildTrackingLink();
+  try {
+    const res = await fetch('/.netlify/functions/send-sos-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userName: currentUser?.name || 'Someone using Raksha',
+        guardianPhones: contacts.map(c => c.phone),
+        trackingLink,
+        kind, // "initial" or "update"
+        customMessage: window._customSosMessage || window._adminDefaultSosMessage || '',
+      }),
+    });
+    const data = await res.json();
+    console.log(`SOS SMS (${kind}) result:`, data);
+  } catch (e) {
+    console.warn('SOS SMS failed (needs your backend deployed with the function + SMS credentials):', e);
+  }
+
+  // WhatsApp fires alongside SMS, using a pre-approved template
+  // (name/location/link as separate parameters, not free-form text).
+  try {
+    const waRes = await fetch('/.netlify/functions/send-sos-whatsapp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userName: currentUser?.name || 'Someone using Raksha',
+        guardianPhones: contacts.map(c => c.phone),
+        trackingLink,
+        latitude: realLat,
+        longitude: realLng,
+      }),
+    });
+    const waData = await waRes.json();
+    console.log(`SOS WhatsApp (${kind}) result:`, waData);
+  } catch (e) {
+    console.warn('SOS WhatsApp failed (needs WhatsApp credentials configured):', e);
+  }
+}
+
+function copyTrackingLink() {
+  const btn = document.getElementById('copy-link-btn');
+  const original = btn.textContent;
+  const link = window._lastTrackingLink;
+
+  if (!link) {
+    btn.textContent = 'No link yet - trigger SOS first';
+    setTimeout(() => { btn.textContent = original; }, 1800);
+    return;
+  }
+
+  const showCopied = () => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  };
+  const showFailed = () => {
+    btn.textContent = 'Could not copy - long-press the link above to copy manually';
+    setTimeout(() => { btn.textContent = original; }, 2500);
+  };
+
+  // Try the modern Clipboard API first (needs HTTPS + user gesture).
+  if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+    navigator.clipboard.writeText(link).then(showCopied).catch(() => fallbackCopy(link, showCopied, showFailed));
+  } else {
+    fallbackCopy(link, showCopied, showFailed);
+  }
+}
+
+// Works on http://, inside WebViews, and on older browsers where the
+// Clipboard API is unavailable or blocked.
+function fallbackCopy(text, onSuccess, onFail) {
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
+    const ok = document.execCommand('copy');
+    document.body.removeChild(textarea);
+    ok ? onSuccess() : onFail();
+  } catch (e) {
+    onFail();
+  }
+}
+
+// ---- nearby help (real data, no API key needed) ----
+let nearbyLoading = false;
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+async function loadNearbyHelp() {
+  const statusEl = document.getElementById('nearby-status');
+  const listEl = document.getElementById('nearby-list');
+  if (nearbyLoading) return;
+
+  if (realLat == null || realLng == null) {
+    statusEl.textContent = 'Waiting for your GPS location - make sure location access is allowed.';
+    listEl.innerHTML = '';
+    return;
+  }
+
+  nearbyLoading = true;
+  statusEl.textContent = 'Finding real police stations and hospitals near you...';
+  listEl.innerHTML = '';
+
+  const query = `[out:json][timeout:25];(
+    node["amenity"="police"](around:6000,${realLat},${realLng});
+    node["amenity"="hospital"](around:6000,${realLat},${realLng});
+    node["amenity"="clinic"](around:6000,${realLat},${realLng});
+  );out body;`;
+
+  try {
+    const res = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: 'data=' + encodeURIComponent(query),
+    });
+    const data = await res.json();
+
+    const places = (data.elements || [])
+      .filter(p => p.tags)
+      .map(p => ({
+        name: p.tags.name || (p.tags.amenity === 'police' ? 'Unnamed police station' : 'Unnamed medical facility'),
+        type: p.tags.amenity,
+        lat: p.lat,
+        lon: p.lon,
+        distKm: haversineKm(realLat, realLng, p.lat, p.lon),
+      }))
+      .sort((a, b) => a.distKm - b.distKm)
+      .slice(0, 10);
+
+    if (places.length === 0) {
+      statusEl.textContent = 'No police stations or hospitals found nearby in OpenStreetMap data.';
+      return;
+    }
+
+    statusEl.textContent = `${places.length} places found near your current location`;
+    places.forEach(p => {
+      const row = document.createElement('div');
+      row.className = 'place-row';
+      row.style.cursor = 'pointer';
+      const icon = p.type === 'police' ? 'ti-building-bank' : 'ti-first-aid-kit';
+      row.innerHTML = `<i class="ti ${icon}"></i><div><p class="place-name">${p.name}</p><p class="place-dist">${p.distKm.toFixed(1)} km away</p></div>`;
+      row.onclick = () => window.open(`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}`, '_blank');
+      listEl.appendChild(row);
+    });
+  } catch (e) {
+    statusEl.textContent = 'Could not load nearby places - check your internet connection.';
+    console.warn('Nearby help fetch failed:', e);
+  } finally {
+    nearbyLoading = false;
+  }
+}
+
+// ---- contacts screen (Family Circle) ----
+const AVATAR_COLORS = ['#4F3FE0', '#7B1FA2', '#C2185B', '#1565C0', '#E65100', '#00838F'];
+
+function avatarColorFor(index) {
+  return AVATAR_COLORS[index % AVATAR_COLORS.length];
+}
+
+function relTagClass(relationship) {
+  return (relationship || 'other').toLowerCase().replace(/\s+/g, '');
+}
+
+function renderContacts() {
+  const list = document.getElementById('contact-list');
+  const countEl = document.getElementById('guardians-active-count');
+  const circleCountEl = document.getElementById('circle-count-text');
+  if (countEl) countEl.textContent = contacts.length;
+  if (circleCountEl) circleCountEl.textContent = contacts.length + (contacts.length === 1 ? ' person in your circle' : ' people in your circle');
+
+  list.innerHTML = '';
+  if (contacts.length === 0) {
+    list.innerHTML = '<p class="hint-text" style="text-align:left;">No family members added yet.</p>';
+  } else {
+    contacts.forEach((c, i) => {
+      const card = document.createElement('div');
+      card.className = 'family-member-card';
+      const initial = c.name.trim()[0]?.toUpperCase() || '?';
+      card.innerHTML = `
+        <div class="family-member-top">
+          <div class="circle-avatar" style="background:${avatarColorFor(i)}; position:static; margin-bottom:0; width:44px; height:44px; font-size:15px;">${initial}</div>
+          <div style="flex:1;">
+            <p class="contact-name">${c.name} <span class="rel-tag ${relTagClass(c.relationship)}">${c.relationship}</span></p>
+            <p class="family-member-device">${c.phone}</p>
+            <p class="family-member-status">${i === 0 ? '🥇 Called first during SOS' : 'Backup - called if #1 does not answer'}</p>
+          </div>
+          <div class="guardian-edit-controls" style="display:flex; flex-direction:column; gap:2px;">
+            <button class="del-btn" style="font-size:14px;" onclick="moveGuardianUp(${i})" ${i === 0 ? 'disabled style="opacity:0.25;"' : ''}><i class="ti ti-chevron-up"></i></button>
+            <button class="del-btn" style="font-size:14px;" onclick="moveGuardianDown(${i})" ${i === contacts.length - 1 ? 'disabled style="opacity:0.25;"' : ''}><i class="ti ti-chevron-down"></i></button>
+            <button class="del-btn" onclick="removeContact(${i})"><i class="ti ti-trash"></i></button>
+          </div>
+        </div>`;
+      list.appendChild(card);
+    });
+    if (isChildMode) {
+      document.querySelectorAll('.guardian-edit-controls').forEach(el => el.style.display = 'none');
+    }
+  }
+
+  const addBtnEl = document.getElementById('add-family-member-btn');
+  if (addBtnEl) addBtnEl.style.display = isChildMode ? 'none' : 'block';
+
+  // Also populate the "My Circle" avatar row on the home screen.
+  const homeRow = document.getElementById('circle-avatar-row');
+  if (homeRow) {
+    const addBtn = homeRow.querySelector('.circle-avatar-item:last-child');
+    homeRow.innerHTML = '';
+    contacts.forEach((c, i) => {
+      const initial = c.name.trim()[0]?.toUpperCase() || '?';
+      const item = document.createElement('div');
+      item.className = 'circle-avatar-item';
+      item.onclick = () => showScreen('screen-contacts');
+      item.innerHTML = `<div class="circle-avatar" style="background:${avatarColorFor(i)};">${initial}<span class="live-dot"></span></div><span>${c.name.split(' ')[0]}</span>`;
+      homeRow.appendChild(item);
+    });
+    const addItem = document.createElement('div');
+    addItem.className = 'circle-avatar-item';
+    addItem.onclick = () => showScreen('screen-contacts');
+    addItem.innerHTML = `<div class="circle-avatar-add">+</div><span>Add</span>`;
+    homeRow.appendChild(addItem);
+  }
+}
+
+function showAddContactPrompt() {
+  document.getElementById('ac-name').value = '';
+  document.getElementById('ac-phone').value = '';
+  document.getElementById('ac-relationship').value = '';
+  document.getElementById('ac-error').textContent = '';
+  showScreen('screen-add-contact');
+}
+function saveNewContact() {
+  const name = document.getElementById('ac-name').value.trim();
+  const phone = document.getElementById('ac-phone').value.trim();
+  const relationship = document.getElementById('ac-relationship').value;
+  const errEl = document.getElementById('ac-error');
+  if (!name || !phone || !relationship) { errEl.textContent = 'Fill in all fields.'; return; }
+  contacts.push({ name, phone, relationship });
+  persistCurrentContacts();
+  showScreen('screen-contacts');
+}
+function removeContact(i) { contacts.splice(i, 1); persistCurrentContacts(); renderContacts(); }
+
+function moveGuardianUp(i) {
+  if (i === 0) return;
+  [contacts[i - 1], contacts[i]] = [contacts[i], contacts[i - 1]];
+  persistCurrentContacts();
+  renderContacts();
+}
+
+function moveGuardianDown(i) {
+  if (i === contacts.length - 1) return;
+  [contacts[i + 1], contacts[i]] = [contacts[i], contacts[i + 1]];
+  persistCurrentContacts();
+  renderContacts();
+}
+
+// ---- onboarding walkthrough (shown once, after first signup) ----
+function maybeShowOnboarding() {
+  let alreadySeen = false;
+  try { alreadySeen = localStorage.getItem('raksha_onboarding_seen') === 'true'; } catch (e) {}
+  if (!alreadySeen) {
+    document.getElementById('onboarding-modal').classList.add('show');
+  }
+}
+
+function onboardingNext(step) {
+  document.querySelectorAll('#onboarding-modal > .modal-box > div').forEach(d => d.style.display = 'none');
+  document.getElementById('onboarding-step-' + step).style.display = 'block';
+}
+
+function closeOnboarding() {
+  document.getElementById('onboarding-modal').classList.remove('show');
+  try { localStorage.setItem('raksha_onboarding_seen', 'true'); } catch (e) {}
+}
+
+// ---- fake shutdown screen ----
+// Simulates the phone powering off convincingly - for situations where
+// someone is demanding the phone be turned off. Tapping/holding anywhere
+// on the black screen "wakes it back up" to the real app.
+function triggerFakeShutdown() {
+  const overlay = document.getElementById('fake-shutdown-overlay');
+  const text = document.getElementById('fake-shutdown-text');
+  overlay.style.display = 'flex';
+  text.textContent = 'Powering off...';
+  setTimeout(() => { text.style.display = 'none'; }, 2500);
+  overlay.onclick = () => {
+    overlay.style.display = 'none';
+    text.style.display = 'block';
+    overlay.onclick = null;
+  };
+}
+
+// ============================================================
+// AI SAFETY ASSISTANT - calls the ai-safety-chat Netlify function,
+// which keeps your Anthropic API key server-side. Needs
+// ANTHROPIC_API_KEY set in Netlify env vars to actually respond -
+// until then, it shows a clear message instead of failing silently.
+// ============================================================
+let aiChatHistory = [];
+
+function renderAiMessage(role, text) {
+  const list = document.getElementById('ai-chat-message-list');
+  const bubble = document.createElement('div');
+  bubble.style.cssText = `margin-bottom:10px; display:flex; ${role === 'user' ? 'justify-content:flex-end;' : 'justify-content:flex-start;'}`;
+  bubble.innerHTML = `<div style="max-width:75%; padding:8px 12px; border-radius:14px; font-size:13.5px; background:${role === 'user' ? 'var(--primary)' : '#f3f4f6'}; color:${role === 'user' ? '#fff' : '#1a1a2e'};">${text}</div>`;
+  list.appendChild(bubble);
+  list.scrollTop = list.scrollHeight;
+}
+
+async function sendAiChatMessage() {
+  const input = document.getElementById('ai-chat-input');
+  const message = input.value.trim();
+  if (!message) return;
+  input.value = '';
+  renderAiMessage('user', message);
+
+  try {
+    const res = await fetch('/.netlify/functions/ai-safety-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, conversationHistory: aiChatHistory }),
+    });
+    const data = await res.json();
+
+    if (data.skipped) {
+      renderAiMessage('assistant', "AI chat isn't set up yet - add an ANTHROPIC_API_KEY in Netlify to enable this.");
+      return;
+    }
+    if (!data.success) {
+      renderAiMessage('assistant', "Sorry, something went wrong. Try again in a moment.");
+      return;
+    }
+
+    renderAiMessage('assistant', data.reply);
+    aiChatHistory.push({ role: 'user', content: message });
+    aiChatHistory.push({ role: 'assistant', content: data.reply });
+    if (aiChatHistory.length > 10) aiChatHistory = aiChatHistory.slice(-10); // keep context window reasonable
+  } catch (e) {
+    renderAiMessage('assistant', "Couldn't reach the AI assistant - check your internet connection.");
+  }
+}
+
+// ============================================================
+// SAFETY QUIZ - a short, kid-friendly quiz on common safety scenarios.
+// ============================================================
+const SAFETY_QUIZ_QUESTIONS = [
+  {
+    q: "A stranger in a car offers you candy and asks you to get in. What do you do?",
+    options: ["Get in, they seem nice", "Say no and walk away to a safe adult", "Take the candy but don't get in"],
+    correct: 1,
+  },
+  {
+    q: "You're lost in a mall. Who should you ask for help?",
+    options: ["Any adult nearby", "A store employee or security guard", "Wait outside alone until someone finds you"],
+    correct: 1,
+  },
+  {
+    q: "What's the fastest way to alert your family in an emergency using Raksha?",
+    options: ["Text them slowly", "Tap the big red SOS button", "Wait until you get home"],
+    correct: 1,
+  },
+  {
+    q: "Someone online you've never met asks for your home address. You should:",
+    options: ["Tell them, they seem friendly", "Never share it and tell a trusted adult", "Only share your street name"],
+    correct: 1,
+  },
+  {
+    q: "If you feel unsafe walking somewhere, what's a good idea?",
+    options: ["Use Safe Walk so your parent can see your route", "Just walk faster and hope it's fine", "Turn your phone off to save battery"],
+    correct: 0,
+  },
+];
+
+let quizIndex = 0;
+let quizScore = 0;
+
+function startSafetyQuiz() {
+  quizIndex = 0;
+  quizScore = 0;
+  document.getElementById('quiz-results-view').style.display = 'none';
+  document.getElementById('quiz-question-view').style.display = 'block';
+  document.getElementById('quiz-total-num').textContent = SAFETY_QUIZ_QUESTIONS.length;
+  renderQuizQuestion();
+}
+
+function renderQuizQuestion() {
+  const item = SAFETY_QUIZ_QUESTIONS[quizIndex];
+  document.getElementById('quiz-current-num').textContent = quizIndex + 1;
+  document.getElementById('quiz-question-text').textContent = item.q;
+  document.getElementById('quiz-feedback').textContent = '';
+  const list = document.getElementById('quiz-options-list');
+  list.innerHTML = item.options.map((opt, i) => `
+    <button class="btn-secondary" style="text-align:left; margin-top:8px;" onclick="answerQuizQuestion(${i})">${opt}</button>
+  `).join('');
+}
+
+function answerQuizQuestion(selectedIndex) {
+  const item = SAFETY_QUIZ_QUESTIONS[quizIndex];
+  const feedbackEl = document.getElementById('quiz-feedback');
+  if (selectedIndex === item.correct) {
+    quizScore++;
+    feedbackEl.style.color = '#2e7d32';
+    feedbackEl.textContent = 'Correct! Well done.';
+  } else {
+    feedbackEl.style.color = 'var(--emergency)';
+    feedbackEl.textContent = 'Not quite - keep that in mind for next time!';
+  }
+  setTimeout(() => {
+    quizIndex++;
+    if (quizIndex >= SAFETY_QUIZ_QUESTIONS.length) {
+      showQuizResults();
+    } else {
+      renderQuizQuestion();
+    }
+  }, 900);
+}
+
+function showQuizResults() {
+  document.getElementById('quiz-question-view').style.display = 'none';
+  document.getElementById('quiz-results-view').style.display = 'block';
+  document.getElementById('quiz-score-text').textContent = `${quizScore}/${SAFETY_QUIZ_QUESTIONS.length}`;
+}
+
+// Auto-start whenever the quiz screen is shown (hooked in showScreen).
+function initSafetyQuizIfNeeded() { startSafetyQuiz(); }
+
+// ============================================================
+// SAVE PLACES (Home / School) - simple one-tap "save where I'm
+// standing right now" setup, used as Safe Walk destinations.
+// ============================================================
+function getSavedPlaces() {
+  try {
+    const raw = localStorage.getItem('raksha_saved_places');
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) { return {}; }
+}
+function setSavedPlace(key, lat, lng) {
+  const places = getSavedPlaces();
+  places[key] = { lat, lng };
+  try { localStorage.setItem('raksha_saved_places', JSON.stringify(places)); } catch (e) {}
+  renderSavedPlacesStatus();
+}
+function renderSavedPlacesStatus() {
+  const places = getSavedPlaces();
+  const homeEl = document.getElementById('saved-home-status');
+  const schoolEl = document.getElementById('saved-school-status');
+  if (homeEl) homeEl.textContent = places.home ? 'Saved ✓' : 'Not set';
+  if (schoolEl) schoolEl.textContent = places.school ? 'Saved ✓' : 'Not set';
+}
+function saveCurrentLocationAs(key) {
+  if (realLat == null) { alert('Waiting for GPS - try again in a moment.'); return; }
+  setSavedPlace(key, realLat, realLng);
+  alert((key === 'home' ? 'Home' : 'School') + ' location saved!');
+}
+
+// ============================================================
+// SAFE WALK - real walking-route tracking with deviation alerts.
+// Uses OSRM's free public routing API (router.project-osrm.org) to get
+// an actual walking path, not just a straight line. HONEST LIMITATION:
+// this is a free public demo server, not something with guaranteed
+// uptime/rate limits for heavy production use - fine for personal/demo
+// use, but a paid routing API would be needed for guaranteed reliability
+// at scale.
+//
+// Deviation is detected by checking the live position against the
+// route's path; if the nearest point on the route is farther than
+// SAFE_WALK_DEVIATION_METERS away, it's flagged as "diverted." The alert
+// is written to the SAME Firebase "locations/{id}" path already used
+// for live tracking (adding a safeWalkDiverted flag) - this means any
+// existing guardian view (track.html, guardian-dashboard.html) that
+// already polls this data will show the diverted status automatically,
+// without needing a whole separate parent-child linking system.
+// ============================================================
+let safeWalkRoutePoints = [];
+let safeWalkMap = null, safeWalkMarker = null, safeWalkPolyline = null;
+let safeWalkPollTimer = null;
+let safeWalkDivertedAlready = false;
+const SAFE_WALK_DEVIATION_METERS = 100;
+
+async function startSafeWalk() {
+  const destKey = document.getElementById('safe-walk-destination-select').value;
+  const errEl = document.getElementById('safe-walk-error');
+  if (!destKey) { errEl.textContent = 'Pick a destination first.'; return; }
+  const places = getSavedPlaces();
+  const dest = places[destKey];
+  if (!dest) { errEl.textContent = 'That place is not set up yet - tap "Set up Home / School locations."'; return; }
+  if (realLat == null) { errEl.textContent = 'Waiting for GPS - try again in a moment.'; return; }
+  errEl.textContent = '';
+
+  document.getElementById('safe-walk-setup').style.display = 'none';
+  document.getElementById('safe-walk-active').style.display = 'flex';
+  document.getElementById('safe-walk-status-text').textContent = 'Getting your route...';
+
+  try {
+    const url = `https://router.project-osrm.org/route/v1/foot/${realLng},${realLat};${dest.lng},${dest.lat}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.routes || !data.routes[0]) throw new Error('No route found');
+    safeWalkRoutePoints = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]); // [lat, lng]
+  } catch (e) {
+    console.warn('Could not fetch walking route, falling back to straight line:', e);
+    safeWalkRoutePoints = [[realLat, realLng], [dest.lat, dest.lng]];
+  }
+
+  if (typeof L === 'undefined') {
+    await new Promise(resolve => {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = resolve;
+      document.body.appendChild(script);
+      const cssLink = document.createElement('link');
+      cssLink.rel = 'stylesheet';
+      cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(cssLink);
+    });
+  }
+
+  safeWalkMap = L.map('safe-walk-map').setView([realLat, realLng], 16);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(safeWalkMap);
+  safeWalkPolyline = L.polyline(safeWalkRoutePoints, { color: '#4F3FE0', weight: 5 }).addTo(safeWalkMap);
+  safeWalkMap.fitBounds(safeWalkPolyline.getBounds());
+  const walkIcon = L.divIcon({
+    className: '',
+    html: '<div style="width:28px;height:28px;border-radius:50%;background:#F4A259;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>',
+    iconSize: [28, 28], iconAnchor: [14, 14],
+  });
+  safeWalkMarker = L.marker([realLat, realLng], { icon: walkIcon }).addTo(safeWalkMap);
+
+  safeWalkDivertedAlready = false;
+  document.getElementById('safe-walk-status-text').textContent = 'On track';
+  clearInterval(safeWalkPollTimer);
+  safeWalkPollTimer = setInterval(checkSafeWalkProgress, 5000);
+}
+
+function distanceMetersBetween(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng/2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function distanceToRoute(lat, lng) {
+  let minDist = Infinity;
+  for (const [rLat, rLng] of safeWalkRoutePoints) {
+    const d = distanceMetersBetween(lat, lng, rLat, rLng);
+    if (d < minDist) minDist = d;
+  }
+  return minDist;
+}
+
+async function checkSafeWalkProgress() {
+  if (realLat == null || !safeWalkMarker) return;
+  safeWalkMarker.setLatLng([realLat, realLng]);
+  safeWalkMap.panTo([realLat, realLng]);
+
+  const destPoint = safeWalkRoutePoints[safeWalkRoutePoints.length - 1];
+  const distanceToDest = distanceMetersBetween(realLat, realLng, destPoint[0], destPoint[1]);
+  document.getElementById('safe-walk-distance-text').textContent =
+    distanceToDest < 1000 ? Math.round(distanceToDest) + ' m' : (distanceToDest / 1000).toFixed(1) + ' km';
+
+  const distFromRoute = distanceToRoute(realLat, realLng);
+  const statusEl = document.getElementById('safe-walk-status-text');
+
+  if (distFromRoute > SAFE_WALK_DEVIATION_METERS) {
+    statusEl.textContent = 'Diverted from route!';
+    statusEl.style.color = 'var(--emergency)';
+    if (!safeWalkDivertedAlready) {
+      safeWalkDivertedAlready = true;
+      await flagSafeWalkDiverted(true);
+    }
+  } else {
+    statusEl.textContent = 'On track';
+    statusEl.style.color = '';
+    if (safeWalkDivertedAlready) {
+      safeWalkDivertedAlready = false;
+      await flagSafeWalkDiverted(false);
+    }
+  }
+
+  if (distanceToDest < 30) {
+    finishSafeWalk(true);
+  }
+}
+
+// Writes the diverted flag into the SAME Firebase location record every
+// existing guardian view already polls - this is what lets both the
+// child's own screen AND the parent's tracking page show the alert,
+// reusing infrastructure rather than building a new notification system.
+async function flagSafeWalkDiverted(diverted) {
+  if (!LIVE_SYNC_ENABLED || !currentUser) return;
+  try {
+    await fetch(`${FIREBASE_DB_URL}/locations/${currentUser.id}/safeWalkDiverted.json?auth=${FIREBASE_DB_SECRET}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(diverted),
+    });
+  } catch (e) { console.warn('Could not update safe walk status:', e); }
+}
+
+function finishSafeWalk(arrivedSafely) {
+  clearInterval(safeWalkPollTimer);
+  if (safeWalkMap) { safeWalkMap.remove(); safeWalkMap = null; }
+  flagSafeWalkDiverted(false);
+  document.getElementById('safe-walk-setup').style.display = 'block';
+  document.getElementById('safe-walk-active').style.display = 'none';
+  if (arrivedSafely) alert('Great, glad you made it safely!');
+}
+
+// ============================================================
+// REAL-TIME CHAT (Firebase-backed) - reliable, simple read/write.
+// Same data path is read/written by track.html's guardian-facing side.
+// ============================================================
+let chatPollTimer = null;
+let lastRenderedChatCount = 0;
+
+function startChatPolling() {
+  clearInterval(chatPollTimer);
+  pollChatMessages();
+  chatPollTimer = setInterval(pollChatMessages, 3000);
+}
+
+function stopChatPolling() {
+  clearInterval(chatPollTimer);
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text || !currentUser || !LIVE_SYNC_ENABLED) return;
+  input.value = '';
+  try {
+    await fetch(`${FIREBASE_DB_URL}/chat_messages/${currentUser.id}/${Date.now()}.json?auth=${FIREBASE_DB_SECRET}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sender: 'user', text, timestamp: Date.now() }),
+    });
+    pollChatMessages();
+  } catch (e) {
+    console.warn('Could not send chat message:', e);
+  }
+}
+
+async function pollChatMessages() {
+  if (!currentUser || !LIVE_SYNC_ENABLED) return;
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/chat_messages/${currentUser.id}.json?auth=${FIREBASE_DB_SECRET}`);
+    const data = await res.json();
+    if (!data) return;
+    const messages = Object.values(data).sort((a, b) => a.timestamp - b.timestamp);
+    if (messages.length === lastRenderedChatCount) return; // nothing new, skip re-render
+    lastRenderedChatCount = messages.length;
+
+    const list = document.getElementById('chat-message-list');
+    list.innerHTML = messages.map(m => `
+      <div style="margin-bottom:10px; display:flex; ${m.sender === 'user' ? 'justify-content:flex-end;' : 'justify-content:flex-start;'}">
+        <div style="max-width:75%; padding:8px 12px; border-radius:14px; font-size:13.5px; background:${m.sender === 'user' ? 'var(--primary)' : '#f3f4f6'}; color:${m.sender === 'user' ? '#fff' : '#1a1a2e'};">
+          ${m.text}
+        </div>
+      </div>`).join('');
+    list.scrollTop = list.scrollHeight;
+  } catch (e) {
+    console.warn('Could not load chat messages:', e);
+  }
+}
+
+// ============================================================
+// WEBRTC VOICE CALL - real peer-to-peer audio, using Firebase Realtime
+// Database purely as the signaling channel (exchanging the offer/
+// answer/ICE candidates), which is a completely standard and legitimate
+// way to do WebRTC signaling without needing a dedicated WebSocket
+// server. The actual audio stream itself flows directly between the two
+// devices once connected (or via STUN/TURN relay if needed), NOT through
+// Firebase - Firebase is only used to help the two sides find each other.
+//
+// HONEST LIMITATION: this uses only a public STUN server (for NAT
+// traversal), no TURN server. This works for most home/mobile network
+// combinations but can fail to connect on some restrictive networks
+// (e.g. strict corporate firewalls) where a TURN relay would be needed -
+// that's a real infrastructure cost (TURN servers aren't free) beyond
+// what's reasonable to set up automatically here. Test on your actual
+// networks to confirm it connects.
+let peerConnection = null;
+let localAudioStream = null;
+let webrtcPollTimer = null;
+
+const RTC_CONFIG = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+async function startVoiceCall() {
+  if (!currentUser || !LIVE_SYNC_ENABLED) { alert('Live sync must be configured for voice calling to work.'); return; }
+  const statusEl = document.getElementById('call-status-text');
+  try {
+    localAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    statusEl.textContent = 'Microphone permission denied - cannot start voice call.';
+    return;
+  }
+
+  peerConnection = new RTCPeerConnection(RTC_CONFIG);
+  localAudioStream.getTracks().forEach(track => peerConnection.addTrack(track, localAudioStream));
+
+  peerConnection.ontrack = (event) => {
+    document.getElementById('remote-audio').srcObject = event.streams[0];
+  };
+
+  peerConnection.onicecandidate = async (event) => {
+    if (event.candidate) {
+      await fbPush(`webrtc_signaling/${currentUser.id}/ice_user`, event.candidate.toJSON());
+    }
+  };
+
+  const offer = await peerConnection.createOffer();
+  await peerConnection.setLocalDescription(offer);
+  await fetch(`${FIREBASE_DB_URL}/webrtc_signaling/${currentUser.id}/offer.json?auth=${FIREBASE_DB_SECRET}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(offer),
+  });
+
+  document.getElementById('voice-call-btn').style.display = 'none';
+  document.getElementById('end-call-btn').style.display = 'block';
+  statusEl.textContent = 'Calling guardian - waiting for them to answer...';
+
+  clearInterval(webrtcPollTimer);
+  webrtcPollTimer = setInterval(pollForCallAnswer, 2000);
+}
+
+async function pollForCallAnswer() {
+  if (!peerConnection || !currentUser) return;
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/webrtc_signaling/${currentUser.id}/answer.json?auth=${FIREBASE_DB_SECRET}`);
+    const answer = await res.json();
+    if (answer && !peerConnection.currentRemoteDescription) {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      document.getElementById('call-status-text').textContent = 'Connected';
+    }
+
+    const iceRes = await fetch(`${FIREBASE_DB_URL}/webrtc_signaling/${currentUser.id}/ice_guardian.json?auth=${FIREBASE_DB_SECRET}`);
+    const iceData = await iceRes.json();
+    if (iceData) {
+      for (const candidate of Object.values(iceData)) {
+        try { await peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch (e) {}
+      }
+    }
+  } catch (e) {
+    console.warn('Error polling for call answer:', e);
+  }
+}
+
+async function endVoiceCall() {
+  clearInterval(webrtcPollTimer);
+  if (peerConnection) { peerConnection.close(); peerConnection = null; }
+  if (localAudioStream) { localAudioStream.getTracks().forEach(t => t.stop()); localAudioStream = null; }
+  document.getElementById('voice-call-btn').style.display = 'block';
+  document.getElementById('end-call-btn').style.display = 'none';
+  document.getElementById('call-status-text').textContent = 'Call ended';
+  if (currentUser && LIVE_SYNC_ENABLED) {
+    await fetch(`${FIREBASE_DB_URL}/webrtc_signaling/${currentUser.id}.json?auth=${FIREBASE_DB_SECRET}`, { method: 'DELETE' });
+  }
+}
+
+// Helper: Firebase doesn't have a native "push" from plain REST easily
+// keyed - use a timestamp+random suffix as a simple unique key instead.
+async function fbPush(path, value) {
+  const key = Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+  try {
+    await fetch(`${FIREBASE_DB_URL}/${path}/${key}.json?auth=${FIREBASE_DB_SECRET}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(value),
+    });
+  } catch (e) { console.warn('fbPush failed:', e); }
+}
+
+
+function persistCurrentContacts() {
+  if (!currentUser || !users[currentUser.email]) return;
+  users[currentUser.email].guardians = contacts;
+  saveUsersToStorage();
+}
+
+// ---- history ----
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  list.innerHTML = '';
+  if (sosHistory.length === 0) { list.innerHTML = '<p class="hint-text" style="text-align:left;">No SOS events yet this session.</p>'; return; }
+  sosHistory.forEach((h) => {
+    const row = document.createElement('div');
+    row.className = 'history-row';
+    row.innerHTML = `<p class="h-type">${h.type}</p><p class="h-time">${h.time}</p><p class="h-loc">${h.link}</p>`;
+    list.appendChild(row);
+  });
+}
+</script>
+</body>
+</html>
