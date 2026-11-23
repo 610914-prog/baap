@@ -14,7 +14,31 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">
+/* Safety Toolkit behaviours */
+const RK_QUEUE='rakshaa_offline_sos_queue_v2',RK_REPORTS='rakshaa_local_safety_reports_v1',RK_LESSONS='rakshaa_safety_lessons_v1';
+let rkCallTimer=null,rkRecorder=null,rkChunks=[];
+function rkLocalRead(k,d){try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(e){return d}}
+function rkLocalWrite(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+function rkQueueSos(source){const q=rkLocalRead(RK_QUEUE,[]);q.push({source:source||'SOS',createdAt:new Date().toISOString(),status:'saved locally'});rkLocalWrite(RK_QUEUE,q.slice(-50));rkRefreshOffline()}
+function rkRefreshOffline(){const n=document.getElementById('rk-network'),q=document.getElementById('rk-queue');if(!n||!q)return;n.textContent=navigator.onLine?'Network appears available.':'Offline: internet alerts and live tracking may not work.';q.textContent=rkLocalRead(RK_QUEUE,[]).length+' SOS event(s) saved on this device. This does not mean an alert was delivered.'}
+function rkPrepareSms(){if(!Array.isArray(contacts)||!contacts.length){alert('Add a guardian with a phone number in My Circle first.');return}const g=contacts[0],phone=String(g.phone||'').replace(/[^+0-9]/g,'');if(!phone){alert('The first guardian has no usable phone number.');return}const body='Rakshaa emergency alert. Please contact me. '+(window._lastTrackingLink||buildTrackingLink());window.location.href='sms:'+phone+'?body='+encodeURIComponent(body)}
+function rkRefreshGuardian(){const e=document.getElementById('rk-guardian');if(!e)return;const a=document.getElementById('ack-status');e.textContent=a&&a.textContent.trim()?a.textContent.trim():'No guardian acknowledgement received from the existing tracking service.';if(typeof checkAcknowledgment==='function'&&sosActive)checkAcknowledgment().then(()=>{const v=document.getElementById('ack-status');if(v&&v.textContent.trim())e.textContent=v.textContent.trim()})}
+function rkScheduleCall(){rkCancelCall();const name=(document.getElementById('rk-caller').value||'Family').trim().slice(0,32)||'Family',delay=Number(document.getElementById('rk-delay').value)||0;document.getElementById('rk-call-status').textContent='Simulated call scheduled in '+delay+' seconds.';rkCallTimer=setTimeout(()=>{document.getElementById('rk-caller-label').textContent=name;document.getElementById('rk-call-overlay').classList.add('show');rkCallTimer=null},delay*1000)}
+function rkCancelCall(){if(rkCallTimer)clearTimeout(rkCallTimer);rkCallTimer=null;const e=document.getElementById('rk-call-status');if(e)e.textContent='No simulated call scheduled.'}
+function rkEndCall(){document.getElementById('rk-call-overlay').classList.remove('show');document.getElementById('rk-call-status').textContent='Simulated call dismissed.'}
+function rkAnswerCall(){document.getElementById('rk-call-overlay').classList.remove('show');document.getElementById('rk-call-status').textContent='Simulation accepted. No real call was made.'}
+async function rkStartRecording(){const s=document.getElementById('rk-record-status');if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){s.textContent='Recording is not supported by this browser.';return}try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});rkChunks=[];rkRecorder=new MediaRecorder(stream);rkRecorder.ondataavailable=e=>{if(e.data?.size)rkChunks.push(e.data)};rkRecorder.onstop=()=>{const blob=new Blob(rkChunks,{type:rkRecorder.mimeType||'audio/webm'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='rakshaa-audio-'+Date.now()+'.webm';a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);stream.getTracks().forEach(t=>t.stop());s.textContent='Recording saved to device downloads.';document.getElementById('rk-record-start').disabled=false;document.getElementById('rk-record-stop').disabled=true};rkRecorder.start();s.textContent='Recording active. Tap Stop & save when finished.';document.getElementById('rk-record-start').disabled=true;document.getElementById('rk-record-stop').disabled=false}catch(e){s.textContent='Microphone permission denied or recording could not start.'}}
+function rkStopRecording(){if(rkRecorder&&rkRecorder.state!=='inactive')rkRecorder.stop()}
+function rkOpenRoute(){const d=(document.getElementById('rk-destination').value||'').trim();if(!d){alert('Enter a destination first.');return}const o=realLat!=null&&realLng!=null?realLat+','+realLng:'';window.open('https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(d)+(o?'&origin='+encodeURIComponent(o):'')+'&travelmode=walking','_blank','noopener')}
+function rkSaveReport(){const a=rkLocalRead(RK_REPORTS,[]);a.push({type:document.getElementById('rk-report-type').value,note:document.getElementById('rk-report-note').value.trim(),createdAt:new Date().toISOString()});const ok=rkLocalWrite(RK_REPORTS,a.slice(-30));document.getElementById('rk-report-status').textContent=ok?'Saved on this device only; not shared with a community or authority.':'Could not save in this browser.';document.getElementById('rk-report-note').value=''}
+function rkCheckWatch(){document.getElementById('rk-watch').textContent=('bluetooth'in navigator)?'Browser Bluetooth capability detected. No Rakshaa watch pairing or SOS integration is configured.':'No browser wearable API detected. A native companion app is required.'}
+function rkCompleteLesson(){const n=Number(localStorage.getItem(RK_LESSONS)||0)+1;localStorage.setItem(RK_LESSONS,String(n));rkRenderAchievements()}
+function rkRenderAchievements(){const n=Number(localStorage.getItem(RK_LESSONS)||0),e=document.getElementById('rk-achievements'),s=document.getElementById('rk-lessons');if(s)s.textContent='Lessons completed: '+n;if(e)e.innerHTML='<span class="rk-badge">Safety Starter · Unlocked</span>'+(n>=1?'<span class="rk-badge">Awareness Learner · Unlocked</span>':'<span class="rk-badge">Awareness Learner · Complete a lesson</span>')+(n>=3?'<span class="rk-badge">Preparedness Champion · Unlocked</span>':'')}
+window.addEventListener('online',rkRefreshOffline);window.addEventListener('offline',rkRefreshOffline);
+document.addEventListener('DOMContentLoaded',()=>{rkRefreshOffline();rkRefreshGuardian();rkCheckWatch();rkRenderAchievements()});
+
+</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   #splash-screen {
@@ -290,6 +314,23 @@
   .role-toggle { display: flex; gap: 6px; background: #f3f4f6; border-radius: 10px; padding: 4px; margin-bottom: 18px; }
   .role-toggle button { flex: 1; padding: 10px 6px; border: none; border-radius: 8px; background: transparent; font-size: 13px; font-weight: 700; color: #6b7280; cursor: pointer; }
   .role-toggle button.active { background: #fff; color: #4F3FE0; box-shadow: 0 1px 3px rgba(0,0,0,0.14); }
+
+/* Rakshaa Safety Toolkit */
+.rk-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 18px}
+.rk-card{background:#fff;border:1px solid #eef0f2;border-radius:14px;padding:13px;min-width:0}
+.rk-card.wide{grid-column:1/-1}.rk-card h3{font-size:13px;color:var(--text-dark);margin:6px 0}
+.rk-card p,.rk-card li{font-size:11.5px;color:var(--text-muted);line-height:1.5}
+.rk-card ul{padding-left:18px;margin-top:6px}.rk-icon{font-size:21px;color:var(--primary)}
+.rk-status{background:#f4f5fa;border-radius:9px;padding:9px;margin-top:8px;font-size:11.5px;line-height:1.5;color:#374151;overflow-wrap:anywhere}
+.rk-field{width:100%;padding:11px;border:1px solid #e5e7eb;border-radius:9px;font:inherit;font-size:13px;margin:5px 0;background:#fff}
+.rk-card .btn-primary,.rk-card .btn-secondary{font-size:12px;padding:10px;min-height:40px;margin-top:8px}
+.rk-badge{display:inline-block;background:#eeecfd;color:var(--primary);border-radius:20px;padding:5px 8px;font-size:10px;font-weight:700;margin:3px}
+.rk-call{display:none;position:fixed;inset:0;z-index:10030;background:linear-gradient(160deg,#20233a,#111827);color:#fff;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:25px}
+.rk-call.show{display:flex}.rk-call-avatar{width:88px;height:88px;border-radius:50%;background:var(--primary);display:grid;place-items:center;font-size:34px;margin-bottom:18px}
+.rk-call-actions{display:flex;gap:34px;margin-top:40px}.rk-call-actions button{width:62px;height:62px;border:0;border-radius:50%;font-size:24px;color:#fff}
+.rk-call-actions .decline{background:#e5484d}.rk-call-actions .answer{background:#22c55e}
+@media(max-width:360px){.rk-grid{grid-template-columns:1fr}.rk-card.wide{grid-column:auto}}
+
 </style>
 </head>
 <body>
@@ -471,6 +512,7 @@
         <div class="quick-card" onclick="showScreen('screen-walk-home')"><i class="ti ti-walk"></i><p>Walk Me Home</p></div>
         <div class="quick-card" onclick="showScreen('screen-safe-walk')"><i class="ti ti-walk"></i><p>Safe Walk</p></div>
         <div class="quick-card" onclick="showScreen('screen-safety-quiz')"><i class="ti ti-shield-check"></i><p>Safety Quiz</p></div>
+        <div class="quick-card" onclick="showScreen('screen-safety-toolkit')"><i class="ti ti-shield-check"></i><p>Safety Toolkit</p></div>
         <div class="quick-card" onclick="showScreen('screen-ai-chat')"><i class="ti ti-message-circle"></i><p>Ask Raksha (AI)</p></div>
         <div class="quick-card" onclick="showScreen('screen-sos-chat')"><i class="ti ti-message-circle"></i><p>Chat &amp; call</p></div>
         <div class="quick-card" onclick="showScreen('screen-history')"><i class="ti ti-history"></i><p>SOS history</p></div>
@@ -800,8 +842,29 @@
     </div>
   </div>
 
-</div>
 
+  <!-- RAKSHAA SAFETY TOOLKIT -->
+  <div class="screen" id="screen-safety-toolkit">
+    <div class="back-row" onclick="showScreen('screen-home')"><i class="ti ti-arrow-left"></i><span>Back</span></div>
+    <h1 class="app-title" style="margin-top:14px;">Safety Toolkit</h1>
+    <p class="sub">Preparedness, communication and awareness tools</p>
+    <div class="status-card" style="margin-bottom:14px;"><h2 style="font-size:18px;">Your safety, one place.</h2><p style="font-size:12px;line-height:1.5;margin-top:6px;">Explore Rakshaa's additional tools. Some functions depend on device capabilities, network access and connected services.</p></div>
+    <div class="rk-grid">
+      <section class="rk-card wide"><div class="rk-icon">📡</div><h3>1. Offline SOS fallback</h3><p>Save an emergency event locally and prepare an SMS to a saved guardian. A local record is not proof that an alert was delivered.</p><div class="rk-status" id="rk-network">Checking connection…</div><div class="rk-status" id="rk-queue">No locally queued events.</div><button class="btn-secondary" onclick="rkRefreshOffline()">Refresh status</button><button class="btn-primary" onclick="rkPrepareSms()">Prepare guardian SMS</button></section>
+      <section class="rk-card wide"><div class="rk-icon">👥</div><h3>2. Guardian response status</h3><p>Shows acknowledgement from the existing guardian tracking workflow only when received.</p><div class="rk-status" id="rk-guardian">No acknowledgement reported.</div><button class="btn-secondary" onclick="rkRefreshGuardian()">Refresh response</button></section>
+      <section class="rk-card"><div class="rk-icon">📞</div><h3>3. Fake Call</h3><p>Simulated incoming call on this screen. It does not call the displayed person.</p><input class="rk-field" id="rk-caller" maxlength="32" value="Family" aria-label="Caller name"><select class="rk-field" id="rk-delay" aria-label="Call delay"><option value="0">Immediately</option><option value="10">After 10 seconds</option><option value="30">After 30 seconds</option></select><button class="btn-primary" onclick="rkScheduleCall()">Schedule call</button><button class="btn-secondary" onclick="rkCancelCall()">Cancel</button><div class="rk-status" id="rk-call-status">No simulated call scheduled.</div></section>
+      <section class="rk-card"><div class="rk-icon">🎙️</div><h3>4. Emergency audio recording</h3><p>Starts only after you tap and grant microphone permission. The recording is saved to your device.</p><button class="btn-primary" id="rk-record-start" onclick="rkStartRecording()">Start recording</button><button class="btn-secondary" id="rk-record-stop" onclick="rkStopRecording()" disabled>Stop &amp; save</button><div class="rk-status" id="rk-record-status">Not recording.</div></section>
+      <section class="rk-card wide"><div class="rk-icon">🗺️</div><h3>5. AI Safe Route Finder</h3><p>Open available walking directions and nearby help. Directions are not verified as safe and are not an AI safety assessment.</p><input class="rk-field" id="rk-destination" maxlength="120" placeholder="Enter destination" aria-label="Destination"><button class="btn-primary" onclick="rkOpenRoute()">View walking routes</button><button class="btn-secondary" onclick="showScreen('screen-nearby')">Find nearby help</button></section>
+      <section class="rk-card wide"><div class="rk-icon">🤝</div><h3>6. Community Safety Network</h3><p>Save a safety concern locally. A verified public community network needs a moderated backend and is not enabled in this build.</p><select class="rk-field" id="rk-report-type"><option>Street lighting concern</option><option>Unsafe crossing</option><option>Harassment or nuisance</option><option>Other safety concern</option></select><textarea class="rk-field" id="rk-report-note" maxlength="400" rows="2" placeholder="Describe the concern without personal details"></textarea><button class="btn-primary" onclick="rkSaveReport()">Save report on this device</button><div class="rk-status" id="rk-report-status">No report saved.</div></section>
+      <section class="rk-card wide"><div class="rk-icon">⌚</div><h3>7. Smartwatch integration</h3><p>Apple Watch and Wear OS SOS require a companion app and device-specific permissions. This web app does not claim to pair a watch.</p><div class="rk-status" id="rk-watch">No smartwatch integration connected.</div><button class="btn-secondary" onclick="rkCheckWatch()">Check browser capability</button></section>
+      <section class="rk-card wide"><div class="rk-icon">🛡️</div><h3>8. Self-Defence Academy</h3><p>Prevention-first safety lessons:</p><ul><li>Notice exits and move towards well-lit, populated places.</li><li>Use a clear voice and set boundaries when safe.</li><li>Avoid confrontation and seek trusted help early.</li><li>Plan check-ins and share journeys with someone trusted.</li><li>Learn first aid from a qualified instructor.</li></ul><button class="btn-primary" onclick="rkCompleteLesson()">Complete awareness lesson</button><div class="rk-status" id="rk-lessons">Lessons completed: 0</div></section>
+      <section class="rk-card wide"><div class="rk-icon">🏅</div><h3>9. Safety achievements</h3><p>Milestones reward learning and preparedness, never unnecessary SOS triggers.</p><div id="rk-achievements"><span class="rk-badge">Safety Starter · Unlocked</span></div></section>
+    </div>
+    <p class="hint-text">Rakshaa is a support tool, not a replacement for emergency services. In India, call 112 for emergency assistance where available.</p>
+  </div>
+  <div class="rk-call" id="rk-call-overlay" role="dialog" aria-modal="true" aria-label="Simulated incoming call"><div class="rk-call-avatar">☎</div><h2 id="rk-caller-label">Family</h2><p style="color:#cbd5e1;margin-top:8px;">Simulated incoming call · Not a real phone call</p><div class="rk-call-actions"><button class="decline" onclick="rkEndCall()" aria-label="Dismiss">×</button><button class="answer" onclick="rkAnswerCall()" aria-label="Accept simulation">✓</button></div></div>
+
+</div>
 
 <!-- CHECK-IN MODAL -->
 <div class="modal-overlay" id="checkin-modal">
@@ -2065,6 +2128,7 @@ let sosActive = false;
 let recurringSmsTimer = null;
 
 function triggerSOS(source) {
+  if (!navigator.onLine) rkQueueSos(source);
   const btn = document.getElementById('sos-button');
   btn.classList.add('triggered');
   setTimeout(() => btn.classList.remove('triggered'), 500);
